@@ -1,5 +1,5 @@
 import { test, expect } from "bun:test";
-import { Try } from "../index";
+import { Try } from "../src/index";
 
 test("Try.catch can run synchronous function", () => {
   const [value, error] = Try.catch(() => 123)

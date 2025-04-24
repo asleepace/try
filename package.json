@@ -1,20 +1,26 @@
 {
-  "name": "try",
+  "name": "@try/catch",
   "version": "0.1.0",
   "description": "TypeScript utilities for error handling.",
   "author": "Colin Teahan",
   "license": "MIT",
-  "module": "index.ts",
   "type": "module",
+  "source": "./src/index.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target node",
+    "test": "bun test",
+    "prepublishOnly": "bun run build"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
   "peerDependencies": {
     "typescript": "^5"
-  },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "files": [
-    "dist"
-  ]
+  }
 }
