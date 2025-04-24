@@ -5,10 +5,10 @@ export type IsAsync<F> = F extends (...args: any[]) => Promise<any> ? true : fal
 export class Try {
     static err = (e: unknown) => e instanceof Error ? e : new Error(String(e))
 
-    static _handler<T, Fn extends () => T>(fn: Fn, isAsync?: false): TryResult<T>
-    static _handler<T, Fn extends () => Promise<T>>(fn: Fn, isAsync?: true): Promise<TryResult<T>>
-    static _handler<T, Fn extends () => T>(fn: Fn, isAsync?: true): Promise<TryResult<T>> | Promise<TryResult<Promise<T>>>
-    static _handler<T, Fn extends () => T>(fn: Fn, isAsync?: boolean): TryResult<T> | Promise<TryResult<T>> {
+    static #handler<T, Fn extends () => T>(fn: Fn, isAsync?: false): TryResult<T>
+    static #handler<T, Fn extends () => Promise<T>>(fn: Fn, isAsync?: true): Promise<TryResult<T>>
+    static #handler<T, Fn extends () => T>(fn: Fn, isAsync?: true): Promise<TryResult<T>> | Promise<TryResult<Promise<T>>>
+    static #handler<T, Fn extends () => T>(fn: Fn, isAsync?: boolean): TryResult<T> | Promise<TryResult<T>> {
         try {
             const output = fn()
             if (output instanceof Promise) {
@@ -43,6 +43,39 @@ export class Try {
      */
 
 
+    /**
+     * # Try / Catch
+     * 
+     * Simple error handling utility which will invoke the provided function and
+     * catch any thrown errors, the result of the function execution will then be
+     * returned as a result tuple.
+     * 
+     * ```ts
+     * // sync example:
+     * const [value, error] = Try.catch(() => {
+     *    if (Math.random() < 0.5) {
+     *      throw new Error('Uh oh!')
+     *    }
+     *    return "it works!" 
+     * })
+     * 
+     * if (!error) {
+     *    const firstWord = value.split(" ") // type safe!
+     * }
+     * 
+     * // async example:
+     * const [user, networkError] = await Try.catch(async () => {
+     *    const response = await fetch('https://example.com/users?id=123')
+     *    return await response.json()
+     * })
+     * 
+     * if (!networkError) {
+     *    console.log(`Hello, ${user.name}!`)
+     * } else {
+     *    console.warn(`Failed fetching user: ${networkError.message}`)
+     * }
+     * ```
+     */
     static catch<T>(fn: () => never): TryResult<unknown>
     static catch<T>(fn: () => Promise<T>): Promise<TryResult<T>>
     static catch<T>(fn: () => T): TryResult<T>
@@ -50,7 +83,7 @@ export class Try {
         try {
             const value = fn()
             if (value instanceof Promise) {
-                return Try._handler(() => value, true)
+                return Try.#handler(() => value, true)
             } else {
                 return [value, undefined] as const
             }
