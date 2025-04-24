@@ -14,8 +14,8 @@
   ],
   "scripts": {
     "build": "bun build ./src/index.ts --outdir ./dist --target node",
-    "publish:dry": "bun run npm publish --dry-run --access=public",
-    "publish": "bun run npm publish --access=public",
+    "npm:publish:dry": "bun run npm publish --dry-run --access=public",
+    "npm:publish": "bun run npm publish --access=public",
     "test": "bun test",
     "prepublishOnly": "bun run build"
   },
