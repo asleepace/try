@@ -1,0 +1,20 @@
+{
+  "name": "try",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "version": "0.1.0",
+  "description": "TypeScript utilities for error handling.",
+  "author": "Colin Teahan",
+  "license": "MIT"
+}
