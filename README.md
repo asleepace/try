@@ -38,7 +38,7 @@ bun add @asleepace/try
 import { Try } from '@asleepace/try';
 
 // Synchronous error handling
-const [result, error] = Try.run(() => {
+const [result, error] = Try.catch(() => {
   // Your code that might throw an error
   return "success";
 });
@@ -51,7 +51,7 @@ if (error) {
 
 // Asynchronous error handling
 async function fetchData() {
-  const [data, error] = await Try.run(async () => {
+  const [data, error] = await Try.catch(async () => {
     const response = await fetch('https://api.example.com/data');
     return response.json();
   });
@@ -67,7 +67,7 @@ async function fetchData() {
 
 ## API
 
-### `Try.run<T>(fn: () => T | Promise<T>): [T | null, Error | null] | Promise<[T | null, Error | null]>`
+### `Try.catch<T>(fn: () => T | Promise<T>): [T | null, Error | null] | Promise<[T | null, Error | null]>`
 
 Executes a function and returns a tuple containing either:
 - `[result, null]` if the function executes successfully
@@ -116,7 +116,7 @@ function UserProfile({ userId }) {
     async function loadUser() {
       setLoading(true);
       
-      const [userData, fetchError] = await Try.run(async () => {
+      const [userData, fetchError] = await Try.catch(async () => {
         const response = await fetch(`/api/users/${userId}`);
         if (!response.ok) throw new Error(`HTTP error ${response.status}`);
         return response.json();
@@ -149,11 +149,11 @@ import { Try } from '@asleepace/try';
 
 async function processData(rawData) {
   // Step 1: Parse the data
-  const [parsed, parseError] = Try.run(() => JSON.parse(rawData));
+  const [parsed, parseError] = Try.catch(() => JSON.parse(rawData));
   if (parseError) return [null, new Error(`Failed to parse data: ${parseError.message}`)];
   
   // Step 2: Transform the data
-  const [transformed, transformError] = Try.run(() => {
+  const [transformed, transformError] = Try.catch(() => {
     return parsed.items.map(item => ({
       id: item.id,
       name: item.name.toUpperCase(),
@@ -163,7 +163,7 @@ async function processData(rawData) {
   if (transformError) return [null, new Error(`Failed to transform data: ${transformError.message}`)];
   
   // Step 3: Save the data
-  const [saved, saveError] = await Try.run(async () => {
+  const [saved, saveError] = await Try.catch(async () => {
     const response = await fetch('/api/save', {
       method: 'POST',
       body: JSON.stringify(transformed)
