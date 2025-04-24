@@ -11,22 +11,22 @@ test("Try.catch can catch synchronous values", () => {
 // Can catch errors from synchronous functions
 test("Try.catch can catch synchronous errors", () => {
   const [value, error] = Try.catch(() => {
-    throw new Error("test")
+    throw new Error("error")
     return 456
   })
   expect(value).toBeUndefined()
   expect(error).toBeDefined()
-  expect(error?.message).toBe("test")
+  expect(error?.message).toBe("error")
 });
 
 // Handle edge case where return type is never
 test("Try.catch can catch synchronous errors (edge-case)", () => {
   const [value, error] = Try.catch(() => {
-    throw new Error("test")
+    throw new Error("error")
   })
   expect(value).toBeUndefined()
   expect(error).toBeDefined()
-  expect(error?.message).toBe("test")
+  expect(error?.message).toBe("error")
 });
 
 // Can extract values from async functions
