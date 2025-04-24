@@ -1,5 +1,5 @@
 {
-  "name": "@try/catch",
+  "name": "@tslabs/try",
   "version": "0.1.0",
   "description": "TypeScript utilities for error handling.",
   "author": "Colin Teahan",

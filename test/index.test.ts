@@ -49,7 +49,7 @@ test("Try.catch can catch asynchronous errors", async () => {
 });
 
 // Can handle promise rejections
-test("Try.catch can catch promise rejections", async () => {
+test("Try.catch can catch promise rejections (async)", async () => {
   const [value, error] = await Try.catch(async () => {
     return Promise.reject("error")
   })
@@ -59,7 +59,7 @@ test("Try.catch can catch promise rejections", async () => {
 });
 
 // Can handle promise resolutions
-test("Try.catch can catch promise resolutions", async () => {
+test("Try.catch can catch promise resolutions (async)", async () => {
   const [value, error] = await Try.catch(async () => {
     return Promise.resolve(789)
   })
