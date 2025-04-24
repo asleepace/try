@@ -1,5 +1,9 @@
 {
   "name": "try",
+  "version": "0.1.0",
+  "description": "TypeScript utilities for error handling.",
+  "author": "Colin Teahan",
+  "license": "MIT",
   "module": "index.ts",
   "type": "module",
   "devDependencies": {
@@ -12,9 +16,5 @@
   "types": "./dist/index.d.ts",
   "files": [
     "dist"
-  ],
-  "version": "0.1.0",
-  "description": "TypeScript utilities for error handling.",
-  "author": "Colin Teahan",
-  "license": "MIT"
+  ]
 }
