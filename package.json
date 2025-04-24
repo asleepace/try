@@ -1,5 +1,5 @@
 {
-  "name": "@tslabs/try",
+  "name": "@asleepace/try",
   "version": "0.1.0",
   "description": "TypeScript utilities for error handling.",
   "author": "Colin Teahan",
@@ -14,6 +14,8 @@
   ],
   "scripts": {
     "build": "bun build ./src/index.ts --outdir ./dist --target node",
+    "publish:dry": "bun run npm publish --dry-run --access=public",
+    "publish": "bun run npm publish --access=public",
     "test": "bun test",
     "prepublishOnly": "bun run build"
   },
