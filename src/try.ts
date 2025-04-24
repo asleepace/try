@@ -1,6 +1,3 @@
-
-
-
 // Result tuple which contains a value or an error
 export type TryResult<T> = [T, undefined] | [undefined, Error]
 export type IsAsync<F> = F extends (...args: any[]) => Promise<any> ? true : false
