@@ -46,6 +46,7 @@ export class Try {
      */
 
 
+    static catch<T>(fn: () => never): Result<unknown>
     static catch<T>(fn: () => Promise<T>): Promise<Result<T>>
     static catch<T>(fn: () => T): Result<T>
     static catch<T>(fn: () => T | Promise<T>): Result<T> | Promise<Result<T>> {
