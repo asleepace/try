@@ -9,10 +9,15 @@
     "allowJs": true,
 
     // Bundler mode
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
+    "moduleResolution": "node",
+    "esModuleInterop": true,
     "verbatimModuleSyntax": true,
-    "noEmit": true,
+
+    // Output configuration
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "dist",
 
     // Best practices
     "strict": true,
@@ -25,13 +30,12 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
 
-    // Project Specific
-    "declaration": true,
-    "outDir": "dist",
+    // Project specific
     "baseUrl": ".",
     "paths": {
       "*": ["*", "src/*"]
     }
   },
-  "include": ["src/**/*", "test/**/*"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test"]
 }
