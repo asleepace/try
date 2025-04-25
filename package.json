@@ -27,6 +27,7 @@
     "build": "bun run tsc && bun build ./src/index.ts --outdir ./dist --target node",
     "npm:publish:dry": "bun run npm publish --dry-run --access=public",
     "npm:publish": "bun run npm publish --access=public",
+    "npm:patch": "bun run npm version patch",
     "test": "bun test",
     "prepublishOnly": "bun run build"
   },
