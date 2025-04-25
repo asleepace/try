@@ -5,6 +5,13 @@ Type-safe error handling primitives for modern JavaScript & TypeScript projects.
 ```ts
 const [json, error] = Try.catch(() => JSON.parse(data))
 
+if (!error) {
+  console.log(json.data)
+} else {
+  console.warn(error.message)
+}
+
+
 // or via async / await ...
 
 const [user, error] = await Try.catch(fetchUser)
@@ -67,11 +74,15 @@ async function fetchData() {
 
 ## API
 
-### `Try.catch<T>(fn: () => T | Promise<T>): [T | null, Error | null] | Promise<[T | null, Error | null]>`
+```ts
+Try.catch<T>(fn: () => T): [T, undefined] | [undefined, Error]
+Try.catch<T>(fn: () => Promise<T>): Promise<[T, undefined] | [undefined, Error]>
+```
 
 Executes a function and returns a tuple containing either:
-- `[result, null]` if the function executes successfully
-- `[null, error]` if the function throws an error
+
+- `[value, undefined]` if the function executes successfully
+- `[undefined, error]` if the function throws an error
 
 Works with both synchronous and asynchronous functions, automatically returning a Promise for async operations.
 
