@@ -1,8 +1,18 @@
 {
   "name": "@asleepace/try",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "TypeScript utilities for error handling.",
-  "keywords": ["try", "catch", "helper", "error", "handling", "utility", "asleepace", "isomorphic", "ergonomic"],
+  "keywords": [
+    "try",
+    "catch",
+    "helper",
+    "error",
+    "handling",
+    "utility",
+    "asleepace",
+    "isomorphic",
+    "ergonomic"
+  ],
   "author": "Colin Teahan",
   "license": "MIT",
   "type": "module",
