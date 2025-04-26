@@ -4,14 +4,8 @@ export class Try {
   static err = (e: unknown) => (e instanceof Error ? e : new Error(String(e)))
 
   static #handler<T, Fn extends () => T>(fn: Fn, isAsync?: false): TryResult<T>
-  static #handler<T, Fn extends () => Promise<T>>(
-    fn: Fn,
-    isAsync?: true
-  ): Promise<TryResult<T>>
-  static #handler<T, Fn extends () => T>(
-    fn: Fn,
-    isAsync?: true
-  ): Promise<TryResult<T>> | Promise<TryResult<Promise<T>>>
+  static #handler<T, Fn extends () => Promise<T>>(fn: Fn, isAsync?: true): Promise<TryResult<T>>
+  static #handler<T, Fn extends () => T>(fn: Fn, isAsync?: true): Promise<TryResult<T>> | Promise<TryResult<Promise<T>>>
   static #handler<T, Fn extends () => T>(
     fn: Fn,
     isAsync?: boolean
@@ -85,9 +79,7 @@ export class Try {
   static catch<T>(fn: () => never): TryResult<unknown>
   static catch<T>(fn: () => Promise<T>): Promise<TryResult<T>>
   static catch<T>(fn: () => T): TryResult<T>
-  static catch<T>(
-    fn: () => T | Promise<T>
-  ): TryResult<T> | Promise<TryResult<T>> {
+  static catch<T>(fn: () => T | Promise<T>): TryResult<T> | Promise<TryResult<T>> {
     try {
       const value = fn()
       if (value instanceof Promise) {
