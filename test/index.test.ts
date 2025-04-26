@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test'
-import { Try } from '../src/index'
+import { Res, Try } from '../src/index'
 
 // Can extract values from synchronous functions
 test('Try.catch can catch synchronous values', () => {
@@ -390,3 +390,16 @@ test('Custom error handling with Try', () => {
   expect(failure).toBe('Custom handler caught: oops')
 })
 
+test('Can call instanceof on Res class', () => {
+  const result = Try.catch(() => 123)
+  expect(result instanceof Res).toBe(true)
+})
+
+test('Can call toString on Res class', () => {
+  const result1 = Try.catch(() => 123)
+  expect(result1.toString()).toBe('Result.Ok(123)')
+  const result2 = Try.catch(() => {
+    throw new Error('456')
+  })
+  expect(result2.toString()).toBe('Result.Error(456)')
+})
