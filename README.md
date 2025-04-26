@@ -28,6 +28,10 @@ if (link.ok) {
 } else {
   console.warn(link.error.message)
 }
+
+// and ergonomic value-error-tuple (vet) shorthand
+
+let [link] = vet(() => new URL(maybeUrl))
 ```
 
 ## Installation
