@@ -1,6 +1,11 @@
 import { Try } from './try'
-import { Res, type TryResult } from './result'
-export { Try, Res, type TryResult }
+import {
+  Res,
+  type TryResult,
+  type TryResultOk,
+  type TryResultError,
+} from './result'
+export { Try, Res, type TryResult, type TryResultOk, type TryResultError }
 
 /**
  * ## Value / Error Tuple (VET)

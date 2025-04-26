@@ -11,7 +11,10 @@
     "utility",
     "asleepace",
     "isomorphic",
-    "ergonomic"
+    "ergonomic",
+    "vet",
+    "unwrap",
+    "result"
   ],
   "author": "Colin Teahan",
   "license": "MIT",
