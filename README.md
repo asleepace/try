@@ -31,7 +31,10 @@ if (link.ok) {
 
 // and ergonomic value-error-tuple (vet) shorthand:
 
-let [link] = vet(() => new URL(maybeUrl))
+const link = vet(() => new URL('asleepace.com'))
+  .or(() => new URL('https://aslee pace.com'))
+  .or(() => new URL('https://github.com'))
+  .unwrapOr(new URL('https://npm.com'))
 ```
 
 ## Installation
