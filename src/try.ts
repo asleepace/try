@@ -1,6 +1,4 @@
-// Result tuple which contains a value or an error
-export type TryResult<T> = [T, undefined] | [undefined, Error]
-export type IsAsync<F> = F extends (...args: any[]) => Promise<any> ? true : false
+import { withResult, type TryResult } from "./result"
 
 export class Try {
     static err = (e: unknown) => e instanceof Error ? e : new Error(String(e))
@@ -15,16 +13,16 @@ export class Try {
                 return new Promise(async (resolve) => {
                     try {
                         const value = await output
-                        return resolve([value, undefined])
+                        return resolve(withResult([value, undefined]))
                     } catch (e) {
-                        return resolve([undefined, Try.err(e)])
+                        return resolve(withResult([undefined, Try.err(e)]))
                     }
                 })
             } else {
-                return [output, undefined]
+                return withResult([output, undefined])
             }
         } catch (e) {
-            return [undefined, Try.err(e)]
+            return withResult([undefined, Try.err(e)])
         }
     }
 
@@ -85,10 +83,10 @@ export class Try {
             if (value instanceof Promise) {
                 return Try.#handler(() => value, true)
             } else {
-                return [value, undefined] as const
+                return withResult([value, undefined])
             }
         } catch (e) {
-            return [undefined, Try.err(e)] as const
+            return withResult([undefined, Try.err(e)])
         }
     }
 }

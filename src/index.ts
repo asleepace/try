@@ -1,2 +1,3 @@
-import { Try, type TryResult } from './try'
-export { Try, type TryResult }
+import { Try } from './try'
+import { withResult, type TryResult } from './result'
+export { Try, withResult, type TryResult }
