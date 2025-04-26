@@ -1,6 +1,6 @@
 {
   "name": "@asleepace/try",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "description": "TypeScript utilities for error handling.",
   "keywords": [
     "try",

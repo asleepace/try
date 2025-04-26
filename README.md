@@ -351,6 +351,24 @@ The returned result object includes several convenience properties and methods:
 - The returned result object is an instance of `TryResultClass`, enabling `instanceof` checks.
 - This allows for easier type checking and integration with existing code patterns.
 
+# Changelog
+
+## 0.2.0
+
+- add `vet(fn)` shorthand
+- add convenience methods
+- Update `Result` class
+- Update test suite
+
+## 0.14.0
+
+- Update `README.md`
+- Update `Try.catch` functionality
+
+## 0.13.0
+
+- Initial release
+
 ## License
 
 MIT
