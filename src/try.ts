@@ -1,48 +1,6 @@
-import { Res, type TryResult } from './result'
+import { Res, type TryResult, type TryResultError } from './result'
 
 export class Try {
-  static err = (e: unknown) => (e instanceof Error ? e : new Error(String(e)))
-
-  static #handler<T, Fn extends () => T>(fn: Fn, isAsync?: false): TryResult<T>
-  static #handler<T, Fn extends () => Promise<T>>(fn: Fn, isAsync?: true): Promise<TryResult<T>>
-  static #handler<T, Fn extends () => T>(fn: Fn, isAsync?: true): Promise<TryResult<T>> | Promise<TryResult<Promise<T>>>
-  static #handler<T, Fn extends () => T>(
-    fn: Fn,
-    isAsync?: boolean
-  ): TryResult<T> | Promise<TryResult<T>> {
-    try {
-      const output = fn()
-      if (output instanceof Promise) {
-        return new Promise(async (resolve) => {
-          try {
-            const value = await output
-            return resolve(Res.ok(value))
-          } catch (e) {
-            return resolve(Res.error(Try.err(e)))
-          }
-        })
-      } else {
-        return Res.ok(output)
-      }
-    } catch (e) {
-      return Res.error(Try.err(e))
-    }
-  }
-
-  /**
-   * @note the ordering of catch overloads matters and the Promise<Result<T>>
-   * overload needs to appear first (possibly reverse of the _handler).
-   * This can cause some issues if the only return type is never.
-   *
-   * ```ts
-   * const [_, err] = Try.catch(() => {
-   *    throw new Error('Edge case')
-   *    // un-comment the next line and it works?
-   *    // return 123;
-   * })
-   * ```
-   */
-
   /**
    * # Try / Catch
    *
@@ -51,44 +9,36 @@ export class Try {
    * returned as a result tuple.
    *
    * ```ts
-   * // sync example:
-   * const [value, error] = Try.catch(() => {
-   *    if (Math.random() < 0.5) {
-   *      throw new Error('Uh oh!')
-   *    }
-   *    return "it works!"
-   * })
+   *  // Simple example for common operations...
+   *  const [url, error] = Try.catch(() => new URL(userInput))  // call sync
    *
-   * if (!error) {
-   *    const firstWord = value.split(" ") // type safe!
-   * }
+   *  if (error) return console.warn(error.message)
    *
-   * // async example:
-   * const [user, networkError] = await Try.catch(async () => {
-   *    const response = await fetch('https://example.com/users?id=123')
-   *    return await response.json()
-   * })
+   *  const [response, networkError] = await Try.catch(() => fetch(url))  // or async
+   *  const [jsonData, parsingError] = await Try.catch(() => response!.json())
    *
-   * if (!networkError) {
-   *    console.log(`Hello, ${user.name}!`)
-   * } else {
-   *    console.warn(`Failed fetching user: ${networkError.message}`)
-   * }
+   *  if (parsingError) return console.warn(error.message)
+   *
+   *  return jsonData
    * ```
    */
-  static catch<T>(fn: () => never): TryResult<unknown>
+  static catch<T>(fn: () => never): TryResultError
   static catch<T>(fn: () => Promise<T>): Promise<TryResult<T>>
   static catch<T>(fn: () => T): TryResult<T>
-  static catch<T>(fn: () => T | Promise<T>): TryResult<T> | Promise<TryResult<T>> {
+  static catch<T>(
+    fn: () => T | Promise<T>
+  ): TryResult<T> | Promise<TryResult<T>> {
     try {
-      const value = fn()
-      if (value instanceof Promise) {
-        return Try.#handler(() => value, true)
+      const output = fn()
+      if (output instanceof Promise) {
+        return output
+          .then((value) => Res.ok(value))
+          .catch((error) => Res.error(error))
       } else {
-        return Res.ok(value)
+        return Res.ok(output)
       }
     } catch (e) {
-      return Res.error(Try.err(e))
+      return Res.error(e)
     }
   }
 }

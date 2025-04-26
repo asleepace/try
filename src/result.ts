@@ -91,7 +91,8 @@ export namespace Res {
     return withResult([value, undefined]) as TryResultOk<T>
   }
 
-  export function error<T>(error: Error): TryResultError {
+  export function error<T>(e: unknown): TryResultError {
+    const error = e instanceof Error ? e : new Error(String(e))
     return withResult([undefined, error]) as TryResultError
   }
 }
