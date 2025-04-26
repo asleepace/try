@@ -1,7 +1,7 @@
 import { test, expect } from 'bun:test'
 import { Try } from '../src/index'
 
-// Can extract valurs from synchronous functions
+// Can extract values from synchronous functions
 test('Try.catch can catch synchronous values', () => {
   const [value, error] = Try.catch(() => 123)
   expect(value).toBe(123)
@@ -180,8 +180,6 @@ test('Edge where we encounters an unexpected error', async () => {
   expect(result.value).toBeUndefined()
   expect(result.error).toBeDefined()
 })
-
-// EXISTING TESTS...
 
 // Test handling of non-Error objects thrown
 test('Try.catch can handle non-Error objects thrown', () => {
