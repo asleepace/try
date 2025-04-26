@@ -160,3 +160,234 @@ test('Edge case where function never returns', () => {
   expect(result.ok).toBeTrue()
   expect(result.value).toBeUndefined()
 })
+
+test('Edge case where async function returns promise', async () => {
+  const result = await Try.catch(async () => {
+    return new Promise<number>((resolve) => {
+      resolve(123)
+    })
+  })
+  expect(result.ok).toBeTrue()
+  expect(result.value).toBe(123)
+})
+
+test('Edge where we encounters an unexpected error', async () => {
+  const result = await Try.catch(async () => {
+    const data = { value: null }
+    return (data as any).value.callInvalidFunction(123)
+  })
+  expect(result.ok).toBeFalse()
+  expect(result.value).toBeUndefined()
+  expect(result.error).toBeDefined()
+})
+
+// EXISTING TESTS...
+
+// Test handling of non-Error objects thrown
+test('Try.catch can handle non-Error objects thrown', () => {
+  const [value, error] = Try.catch(() => {
+    throw 'string error'
+    return 123
+  })
+  expect(value).toBeUndefined()
+  expect(error).toBeDefined()
+  expect(error?.message).toBe('string error')
+})
+
+// Test handling of null/undefined values
+test('Try.catch handles null/undefined values correctly', () => {
+  const nullResult = Try.catch(() => null)
+  expect(nullResult.ok).toBeTrue()
+  expect(nullResult.value).toBeNull()
+
+  const undefinedResult = Try.catch(() => undefined)
+  expect(undefinedResult.ok).toBeTrue()
+  expect(undefinedResult.value).toBeUndefined()
+})
+
+// Test handling falsy values
+test('Try.catch handles falsy values correctly', () => {
+  const zeroResult = Try.catch(() => 0)
+  expect(zeroResult.ok).toBeTrue()
+  expect(zeroResult.value).toBe(0)
+
+  const emptyStringResult = Try.catch(() => '')
+  expect(emptyStringResult.ok).toBeTrue()
+  expect(emptyStringResult.value).toBe('')
+
+  const falseResult = Try.catch(() => false)
+  expect(falseResult.ok).toBeTrue()
+  expect(falseResult.value).toBe(false)
+})
+
+// Test handling of promise rejections with non-Error values
+test('Try.catch handles promise rejections with non-Error values', async () => {
+  const stringResult = await Try.catch(async () => {
+    return Promise.reject('string rejection')
+  })
+  expect(stringResult.ok).toBeFalse()
+  expect(stringResult.error?.message).toBe('string rejection')
+
+  const numberResult = await Try.catch(async () => {
+    return Promise.reject(404)
+  })
+  expect(numberResult.ok).toBeFalse()
+  expect(numberResult.error?.message).toBe('404')
+})
+
+// Test with complex objects
+test('Try.catch with complex objects', () => {
+  const complexObj = {
+    nested: { value: 42 },
+    array: [1, 2, 3],
+    fn: () => 'hello',
+  }
+
+  const result = Try.catch(() => complexObj)
+  expect(result.ok).toBeTrue()
+  expect(result.value).toBe(complexObj)
+  expect(result.value?.nested.value).toBe(42)
+  expect(result.value?.array[1]).toBe(2)
+  expect(result.value?.fn()).toBe('hello')
+})
+
+// Test with timeout/race conditions
+test('Try.catch with timeouts', async () => {
+  const result = await Try.catch(async () => {
+    return Promise.race([
+      new Promise((resolve) => setTimeout(() => resolve('success'), 50)),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 100)
+      ),
+    ])
+  })
+
+  expect(result.ok).toBeTrue()
+  expect(result.value).toBe('success')
+})
+
+// Test delayed rejections
+test('Try.catch with delayed rejections', async () => {
+  const result = await Try.catch(async () => {
+    return new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('delayed error')), 50)
+    )
+  })
+
+  expect(result.ok).toBeFalse()
+  expect(result.error?.message).toBe('delayed error')
+})
+
+// Test with recursive Try.catch
+test('Recursive Try.catch usage', () => {
+  const outer = Try.catch(() => {
+    const inner = Try.catch(() => {
+      throw new Error('inner error')
+    })
+
+    expect(inner.ok).toBeFalse()
+    return inner.ok ? 'success' : 'caught inner error'
+  })
+
+  expect(outer.ok).toBeTrue()
+  expect(outer.value).toBe('caught inner error')
+})
+
+// Test with different Error types
+test('Try.catch with different Error types', () => {
+  const typeError = Try.catch(() => {
+    throw new TypeError('type error')
+  })
+  expect(typeError.ok).toBeFalse()
+  expect(typeError.error).toBeInstanceOf(TypeError)
+
+  const syntaxError = Try.catch(() => {
+    throw new SyntaxError('syntax error')
+  })
+  expect(syntaxError.ok).toBeFalse()
+  expect(syntaxError.error).toBeInstanceOf(SyntaxError)
+})
+
+// Test chaining with .unwrap()
+test('Chaining with unwrap', () => {
+  const result = Try.catch(() => 5).unwrap() + 10
+
+  expect(result).toBe(15)
+
+  expect(() => {
+    const failResult =
+      Try.catch(() => {
+        throw new Error('fail')
+        return 123
+      }).unwrap() + 10
+  }).toThrowError()
+})
+
+// Test conversion from Try result to Promise
+test('Convert Try result to Promise', async () => {
+  const successResult = Try.catch(() => 'value')
+  const successPromise = Promise.resolve(
+    successResult.ok ? successResult.value : Promise.reject(successResult.error)
+  )
+
+  await expect(successPromise).resolves.toBe('value')
+
+  const errorResult = Try.catch(() => {
+    throw new Error('promise error')
+  })
+  const errorPromise = Promise.resolve(
+    errorResult.ok ? errorResult.value : Promise.reject(errorResult.error)
+  )
+
+  await expect(errorPromise).rejects.toThrowError('promise error')
+})
+
+// Test handling of async functions that never resolve
+test('Try.catch with never-resolving promises with timeout', async () => {
+  const timeoutPromise = (promise: Promise<any>, ms: number) => {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout')), ms)
+      ),
+    ])
+  }
+
+  const result = await Try.catch(async () => {
+    return await timeoutPromise(new Promise(() => {}), 100) // never resolves
+  })
+
+  expect(result.ok).toBeFalse()
+  expect(result.error?.message).toBe('Timeout')
+})
+
+// Test with errors thrown in Promise handlers
+test('Try.catch with errors in Promise handlers', async () => {
+  const result = await Try.catch(async () => {
+    return Promise.resolve(42).then((val) => {
+      throw new Error('handler error')
+    })
+  })
+
+  expect(result.ok).toBeFalse()
+  expect(result.error?.message).toBe('handler error')
+})
+
+// Test with custom error handling logic
+test('Custom error handling with Try', () => {
+  function customHandler<T>(fn: () => T): T | string {
+    const result = Try.catch(fn)
+    if (!result.ok) {
+      return `Custom handler caught: ${result.error?.message}`
+    }
+    return result.value
+  }
+
+  const success = customHandler(() => 'success')
+  expect(success).toBe('success')
+
+  const failure = customHandler(() => {
+    throw new Error('oops')
+  })
+  expect(failure).toBe('Custom handler caught: oops')
+})
