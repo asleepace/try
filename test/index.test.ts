@@ -1,5 +1,22 @@
 import { test, expect } from 'bun:test'
-import { Res, Try } from '../src/index'
+import { Res, Try, vet } from '../src/index'
+
+test('Can use vet shorthand utility', () => {
+  const [url] = vet(() => new URL('https://asleepace.com'))
+  expect(url?.href).toBe('https://asleepace.com/')
+
+  const [, err] = vet(() => new URL('https://asleep ace.com'))
+  expect(err?.message).toBeDefined()
+})
+
+test('Can use vet shorthand utility with or chaining', () => {
+  const link = vet(() => new URL('asleepace.com'))
+    .or(() => new URL('https://aslee pace.com'))
+    .or(() => new URL('https://github.com'))
+    .unwrapOr(new URL('https://npm.com'))
+
+  expect(link.href).toBe('https://github.com/')
+})
 
 // Can extract values from synchronous functions
 test('Try.catch can catch synchronous values', () => {

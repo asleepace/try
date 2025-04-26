@@ -144,6 +144,24 @@ Executes a function and returns a tuple containing either:
 
 Works with both synchronous and asynchronous functions, automatically returning a Promise for async operations.
 
+## Shorthand
+
+This package also exports a shorthand utility called **vet** which stands for _value / error tuple_ and provides a more concise way to interact with this api.
+
+```ts
+// Add more examples of the VET shorthand
+import { vet } from '@asleepace/try'
+
+// Simple usage
+const [value] = vet(() => JSON.parse(data))
+
+// Only get the error
+const [, error] = vet(() => JSON.parse(data))
+
+// With TypeScript generics for better type inference
+const [user] = vet<User>(() => getUserFromAPI())
+```
+
 ## Benefits
 
 - **No Try/Catch Blocks**: Clean, readable code without nested try/catch structures

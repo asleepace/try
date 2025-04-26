@@ -1,3 +1,5 @@
+import { Try } from './try'
+
 export type OkTuple<T> = [T, undefined]
 export type ErrorTuple = [undefined, Error]
 
@@ -30,6 +32,8 @@ export class Res<T> extends Array {
     return this.value ?? fallback
   }
 
+  or = Try.catch
+
   toString(): string {
     if (this.ok) {
       return `Result.Ok(${String(this.value)})`
@@ -52,6 +56,7 @@ export type TryResultOk<T> = Res<T> & {
   value: T
   error: undefined
   ok: true
+  or: typeof Try.catch
 }
 
 export type TryResultError = Res<never> & {
@@ -60,6 +65,7 @@ export type TryResultError = Res<never> & {
   value: undefined
   error: Error
   ok: false
+  or: typeof Try.catch
 }
 
 export type TryResult<T> = TryResultOk<T> | TryResultError
