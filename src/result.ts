@@ -1,7 +1,7 @@
 export type OkTuple<T> = [T, undefined]
 export type ErrorTuple = [undefined, Error]
 
-export class TryResultClass<T> extends Array {
+export class Res<T> extends Array {
   declare 0: T | undefined
   declare 1: Error | undefined
 
@@ -46,7 +46,7 @@ export class TryResultClass<T> extends Array {
   }
 }
 
-export type TryResultOk<T> = TryResultClass<T> & {
+export type TryResultOk<T> = Res<T> & {
   0: T
   1: undefined
   value: T
@@ -54,7 +54,7 @@ export type TryResultOk<T> = TryResultClass<T> & {
   ok: true
 }
 
-export type TryResultError = TryResultClass<never> & {
+export type TryResultError = Res<never> & {
   0: undefined
   1: Error
   value: undefined
@@ -71,7 +71,7 @@ export type TryResult<T> = TryResultOk<T> | TryResultError
 export function withResult<T>(tuple: ErrorTuple): TryResultError
 export function withResult<T>(tuple: OkTuple<T>): TryResultOk<T>
 export function withResult<T>(tuple: OkTuple<T> | ErrorTuple): TryResult<T> {
-  const result = new TryResultClass<T>()
+  const result = new Res<T>(2)
   result[0] = tuple[0]
   result[1] = tuple[1]
   return result as TryResult<T>
@@ -80,7 +80,7 @@ export function withResult<T>(tuple: OkTuple<T> | ErrorTuple): TryResult<T> {
 /**
  * Static factory methods for instantiating the result class.
  */
-export namespace TryResultClass {
+export namespace Res {
   export function ok<T>(value: T): TryResultOk<T> {
     return withResult([value, undefined]) as TryResultOk<T>
   }

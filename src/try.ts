@@ -1,4 +1,4 @@
-import { withResult, type TryResult } from './result'
+import { Res, type TryResult } from './result'
 
 export class Try {
   static err = (e: unknown) => (e instanceof Error ? e : new Error(String(e)))
@@ -22,16 +22,16 @@ export class Try {
         return new Promise(async (resolve) => {
           try {
             const value = await output
-            return resolve(withResult([value, undefined]))
+            return resolve(Res.ok(value))
           } catch (e) {
-            return resolve(withResult([undefined, Try.err(e)]))
+            return resolve(Res.error(Try.err(e)))
           }
         })
       } else {
-        return withResult([output, undefined])
+        return Res.ok(output)
       }
     } catch (e) {
-      return withResult([undefined, Try.err(e)])
+      return Res.error(Try.err(e))
     }
   }
 
@@ -93,10 +93,10 @@ export class Try {
       if (value instanceof Promise) {
         return Try.#handler(() => value, true)
       } else {
-        return withResult([value, undefined])
+        return Res.ok(value)
       }
     } catch (e) {
-      return withResult([undefined, Try.err(e)])
+      return Res.error(Try.err(e))
     }
   }
 }

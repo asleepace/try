@@ -389,3 +389,4 @@ test('Custom error handling with Try', () => {
   })
   expect(failure).toBe('Custom handler caught: oops')
 })
+
