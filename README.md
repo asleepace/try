@@ -18,6 +18,16 @@ const [user, error] = await Try.catch(fetchUser)
 if (!error) {
   console.log(`Hello ${user.name}!`) // Type Safe!
 }
+
+// with powerful results!
+
+const link = Try.catch(() => new URL(userInput))
+
+if (link.ok) {
+  console.log(link.value.href)
+} else {
+  console.warn(link.error.message)
+}
 ```
 
 ## Installation
@@ -42,19 +52,16 @@ bun add @asleepace/try
 
 ## Quick Start
 
-```typescript
+```ts
 import { Try } from '@asleepace/try'
 
 // Synchronous error handling
-const [result, error] = Try.catch(() => {
-  // Your code that might throw an error
-  return 'success'
-})
+const [value, error] = Try.catch(doSomethingOrThrow)
 
 if (error) {
   console.error('An error occurred:', error.message)
 } else {
-  console.log('Operation succeeded:', result)
+  console.log('Operation succeeded:', value)
 }
 
 // Asynchronous error handling
@@ -91,10 +98,14 @@ The can be used in conjunction with the array destructuring syntax, which can he
 ```ts
 // example function which will fetch a User over the network
 async function fetchUser() {
-  return fetch('https://api.users.com/me').then((res) => res.json() as User)
+  return
 }
 
-const result = await Try.catch(fetchUser)
+const result = await Try.catch(() =>
+  fetch('https://api.users.com/me')
+    .then((res) => res.json())
+    .then((usr) => usr as User)
+)
 
 console.log(result.value) // User  | undefined
 console.log(result.error) // Error | undefined
@@ -136,6 +147,7 @@ Works with both synchronous and asynchronous functions, automatically returning 
 - **Consistent Pattern**: Uniform error handling for both sync and async code
 - **Zero Dependencies**: Lightweight and dependency-free
 - **Isomorphic**: Works in both browser and Node.js environments
+- **Powerful Results**: Type safe, tested and versatile result class
 
 ## Testing
 
@@ -149,11 +161,38 @@ cd try
 # Install dependencies
 bun install
 
+# Build project & generate types
+bun run build
+
 # Run tests
 bun test
 ```
 
 ## Examples
+
+### Making Network Requests
+
+```ts
+// handle synchronous operations which can throw with ease...
+const encoded = Try.catch(() => JSON.stringify(userInput))
+
+if (!encoded.ok) return encoded.error
+
+const [response, networkError] = await Try.catch(() =>
+  fetch('https://api.com/create', {
+    method: 'POST',
+    body: encoded.value,
+  })
+)
+
+if (networkError) return networkError
+
+const [user, jsonError] = await Try.catch(response.json)
+
+if (jsonError) return jsonError
+
+return user
+```
 
 ### Error Handling in a React Component
 
@@ -198,7 +237,7 @@ function UserProfile({ userId }) {
 
 ### Chaining Operations
 
-```typescript
+```ts
 import { Try } from '@asleepace/try'
 
 async function processData(rawData) {
@@ -235,6 +274,55 @@ async function processData(rawData) {
   return [saved, null]
 }
 ```
+
+# Specification
+
+## Overview
+
+The `Try.catch` utility provides a type-safe way to handle errors in both synchronous and asynchronous functions, returning a result tuple that contains either a value or an error, but never both.
+
+## Return Values
+
+- `Try.catch` always returns either a `ResultOk<T>` or `ResultError` type, which extends the tuple types `[T, undefined]` or `[undefined, Error]` respectively.
+- The returned object is guaranteed to have exactly two elements, with either index 0 or index 1 being undefined.
+- If the function completes successfully, index 0 will contain the return value and index 1 will be undefined.
+- If the function throws an error, index 0 will be undefined and index 1 will contain the error.
+
+## Error Handling
+
+- If a non-Error value is thrown (such as a string, number, or object), it will be automatically converted to an instance of the built-in `Error` class.
+- Thrown values that aren't already errors will first be coerced to strings and then used to construct a new `Error` instance.
+- If the function returns an `Error` object as its value (not thrown), it will be treated as a successful result with the `Error` as the value at index 0, not as an error case.
+
+## Properties and Methods
+
+The returned result object includes several convenience properties and methods:
+
+- `.value`: Returns the value at index 0 (the success value) or undefined if an error occurred.
+- `.error`: Returns the error at index 1 or undefined if the operation was successful.
+- `.ok`: A boolean property that is `true` when `.error === undefined` and `false` otherwise.
+- `.unwrap()`: Returns the value if present, or throws the captured error if no value is present.
+- `.unwrapOr(fallback)`: Returns the value if present, or the provided fallback value if no value is present.
+- `.toString()`: Returns a string representation of the result, displaying either the successful value or the error message.
+
+## Type Safety
+
+- The returned result type correctly narrows in type-guard contexts:
+  - When checking `if (result.ok)`, TypeScript will narrow the type to `ResultOk<T>`.
+  - When checking `if (!result.ok)`, TypeScript will narrow the type to `ResultError`.
+- In `ResultOk<T>` contexts, `result.value` is typed as `T` and `result.error` is typed as `undefined`.
+- In `ResultError` contexts, `result.value` is typed as `undefined` and `result.error` is typed as `Error`.
+
+## Async Support
+
+- `Try.catch` supports both synchronous and asynchronous functions.
+- When passed a function that returns a Promise, `Try.catch` returns a Promise that resolves to a result tuple.
+- Rejected promises are captured and converted to error results, following the same rules as thrown errors.
+
+## Instanceof Support
+
+- The returned result object is an instance of `TryResultClass`, enabling `instanceof` checks.
+- This allows for easier type checking and integration with existing code patterns.
 
 ## License
 
