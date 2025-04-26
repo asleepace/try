@@ -1,21 +1,62 @@
 export type OkTuple<T> = [T, undefined]
 export type ErrorTuple = [undefined, Error]
 
-export type TryResultOk<T> = OkTuple<T> & {
+export class TryResultClass<T> extends Array {
+  declare 0: T | undefined
+  declare 1: Error | undefined
+
+  get value(): T | undefined {
+    return this[0]
+  }
+
+  get error(): Error | undefined {
+    return this[1]
+  }
+
+  get ok(): boolean {
+    return this.error === undefined
+  }
+
+  unwrap(): T {
+    if (!this.ok) {
+      throw new Error(
+        `Failed to unwrap result with error: ${this.error!.message}`
+      )
+    }
+    return this.value as T
+  }
+
+  unwrapOr<G>(fallback: G): T | G {
+    return this.value ?? fallback
+  }
+
+  toString(): string {
+    if (this.ok) {
+      return `Result.Ok(${String(this.value)})`
+    } else {
+      return `Result.Error(${this.error!.message})`
+    }
+  }
+
+  /**
+   * Custom inspect method for Node.js environments.
+   */
+  [Symbol.for('nodejs.util.inspect.custom')](): string {
+    return this.toString()
+  }
+}
+
+export type TryResultOk<T> = TryResultClass<T> & {
   0: T
   1: undefined
-  unwrapOr<G>(fallback: G): T | G
-  unwrap(): T
   value: T
   error: undefined
   ok: true
 }
 
-export type TryResultError = ErrorTuple & {
+export type TryResultError = TryResultClass<never> & {
   0: undefined
   1: Error
-  unwrapOr<G>(fallback: G): G
-  unwrap(): never
   value: undefined
   error: Error
   ok: false
@@ -24,43 +65,27 @@ export type TryResultError = ErrorTuple & {
 export type TryResult<T> = TryResultOk<T> | TryResultError
 
 /**
- * Helper method which takes a try/catch result tuple and extends
- * it with several convenience properties.
+ * Helper method which takes a try/catch result tuple and creates
+ * a TryResultClass instance with all the necessary properties.
  */
 export function withResult<T>(tuple: ErrorTuple): TryResultError
 export function withResult<T>(tuple: OkTuple<T>): TryResultOk<T>
 export function withResult<T>(tuple: OkTuple<T> | ErrorTuple): TryResult<T> {
-  return Object.defineProperties(tuple, {
-    value: {
-      get() {
-        if (!this || this.length !== 2) return undefined
-        return this[0]
-      },
-    },
-    error: {
-      get() {
-        if (!this || this.length !== 2) return undefined
-        return this[1]
-      },
-    },
-    ok: {
-      get() {
-        return this.error === undefined
-      },
-    },
-    unwrap: {
-      value() {
-        if (!this.ok)
-          throw new Error(
-            `Failed to unwrap result with error: ${this.error.message}`
-          )
-        return this.value
-      },
-    },
-    unwrapOr: {
-      value<G>(fallback: G): T | G {
-        return this.value ?? fallback
-      },
-    },
-  }) as TryResult<T>
+  const result = new TryResultClass<T>()
+  result[0] = tuple[0]
+  result[1] = tuple[1]
+  return result as TryResult<T>
+}
+
+/**
+ * Static factory methods for instantiating the result class.
+ */
+export namespace TryResultClass {
+  export function ok<T>(value: T): TryResultOk<T> {
+    return withResult([value, undefined]) as TryResultOk<T>
+  }
+
+  export function error<T>(error: Error): TryResultError {
+    return withResult([undefined, error]) as TryResultError
+  }
 }
