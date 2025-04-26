@@ -16,6 +16,7 @@ test('Can use vet shorthand utility with or chaining', () => {
     .unwrapOr(new URL('https://npm.com'))
 
   expect(link.href).toBe('https://github.com/')
+  expect(link instanceof URL).toBe(true)
 })
 
 // Can extract values from synchronous functions
