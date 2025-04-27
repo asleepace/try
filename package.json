@@ -1,7 +1,7 @@
 {
   "name": "@asleepace/try",
-  "version": "0.2.0",
-  "description": "TypeScript utilities for error handling.",
+  "version": "0.2.1",
+  "description": "TypeScript utilities for exception handling and errors-as-values.",
   "keywords": [
     "try",
     "catch",
@@ -14,7 +14,8 @@
     "ergonomic",
     "vet",
     "unwrap",
-    "result"
+    "result",
+    "exceptions"
   ],
   "author": "Colin Teahan",
   "license": "MIT",
