@@ -4,43 +4,6 @@
 
 Type-safe error handling primitives for modern JavaScript & TypeScript projects.
 
-```ts
-const [json, error] = Try.catch(() => JSON.parse(data))
-
-if (!error) {
-  console.log(json.data)
-} else {
-  console.warn(error.message)
-}
-
-// or via async / await ...
-
-const [user, error] = await Try.catch(fetchUser)
-
-if (!error) {
-  console.log(`Hello ${user.name}!`) // Type Safe!
-}
-
-// with powerful results!
-
-const link = Try.catch(() => new URL(userInput))
-
-if (link.ok) {
-  console.log(link.value.href)
-} else {
-  console.warn(link.error.message)
-}
-
-// and ergonomic value-error-tuple (vet) shorthand:
-
-const link = vet(() => new URL('asleepace.com'))
-  .or(() => new URL('https://aslee pace.com'))
-  .or(() => new URL('https://github.com'))
-  .unwrapOr(new URL('https://npm.com'))
-
-console.log(link.href) // https://github.com/
-```
-
 ## Installation
 
 Using npm:
@@ -63,32 +26,21 @@ bun add @asleepace/try
 
 ## Quick Start
 
+The goal of this package is to provide concise, type-safe and easy to use tools for handling exceptions.
+
 ```ts
 import { Try } from '@asleepace/try'
 
-// Synchronous error handling
-const [value, error] = Try.catch(doSomethingOrThrow)
+const [url, error] = Try.catch(() => new URL(userInput))
 
-if (error) {
-  console.error('An error occurred:', error.message)
-} else {
-  console.log('Operation succeeded:', value)
-}
+if (error) return console.warn(error.message)
 
-// Asynchronous error handling
-async function fetchData() {
-  const [data, error] = await Try.catch(async () => {
-    const response = await fetch('https://api.example.com/data')
-    return response.json()
-  })
+const [response, networkError] = await Try.catch(() => fetch(url))
+const [jsonData, parsingError] = await Try.catch(() => response!.json())
 
-  if (error) {
-    console.error('Failed to fetch data:', error.message)
-    return null
-  }
+if (parsingError) return console.warn(parsingError.message)
 
-  return data
-}
+return jsonData.userName
 ```
 
 ## Result Type
@@ -97,21 +49,30 @@ The `Try.catch(fn)` utility returns a special result type `Res` which is a class
 some helpful utilities for handling results:
 
 ```ts
-const result = Try.catch(() => new URL('http://github.com/'))
+const result = await Try.catch(() => response.json())
 
-if (result.ok) {
-  console.log(result.href) // type safe!
+// includes powerful type-guards
+if (result.isErr()) return console.warn(result.error.message)
+
+// and convenience methods
+const json = result.unwrap()
+
+// supports array destructuring
+const [user, error] = await Try.catch(async () => {
+  const profileUrl = new URL(json.user!.profile)
+  return fetch(profileUrl).then((res) => res.json())
+})
+
+if (!error) {
+  console.log(`Hello, ${user.name}!`)
+} else {
+  console.warn(error.message)
 }
 ```
 
 The can be used in conjunction with the array destructuring syntax, which can help if you are only interested in the value or error.
 
 ```ts
-// example function which will fetch a User over the network
-async function fetchUser() {
-  return
-}
-
 const result = await Try.catch(() =>
   fetch('https://api.users.com/me')
     .then((res) => res.json())
@@ -123,7 +84,7 @@ console.log(result.error) // Error | undefined
 
 // automatically narrows the type for you!
 
-if (result.ok) {
+if (result.isOk()) {
   const user = result.value // User!
 } else {
   const fail = result.error // Error!
@@ -269,11 +230,10 @@ function UserProfile({ userId }) {
 ```ts
 import { Try } from '@asleepace/try'
 
-async function processData(rawData) {
+async function processData(rawData): object | undefined {
   // Step 1: Parse the data
   const [parsed, parseError] = Try.catch(() => JSON.parse(rawData))
-  if (parseError)
-    return [null, new Error(`Failed to parse data: ${parseError.message}`)]
+  if (parseError) return console.warn(parseError.message)
 
   // Step 2: Transform the data
   const [transformed, transformError] = Try.catch(() => {
@@ -283,24 +243,19 @@ async function processData(rawData) {
       value: item.value * 2,
     }))
   })
-  if (transformError)
-    return [
-      null,
-      new Error(`Failed to transform data: ${transformError.message}`),
-    ]
+  if (transformError) return console.warn(transformError.message)
 
   // Step 3: Save the data
-  const [saved, saveError] = await Try.catch(async () => {
+  const saveResult = await Try.catch(async () => {
     const response = await fetch('/api/save', {
-      method: 'POST',
       body: JSON.stringify(transformed),
+      method: 'POST',
     })
     return response.json()
   })
-  if (saveError)
-    return [null, new Error(`Failed to save data: ${saveError.message}`)]
 
-  return [saved, null]
+  if (saveResult.isErr()) return console.warn(saveResult.error)
+  return saveResult.unwrap()
 }
 ```
 
@@ -354,6 +309,16 @@ The returned result object includes several convenience properties and methods:
 - This allows for easier type checking and integration with existing code patterns.
 
 # Changelog
+
+## 0.2.1
+
+- add `Res.ok(value)` and `Res.err(error)` initializers
+- add `isOk()` and `isErr()` type guards to result
+- move all code into `src/index.ts`
+- remove junks files and reduce package size
+- remove internal `Try.#handler` method
+- simplify `Try.catch` logic
+- simplify types
 
 ## 0.2.0
 
