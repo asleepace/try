@@ -120,12 +120,10 @@ export class Res<T> extends Array {
    * @see `unwrapOr(fallback)` for a safer option.
    */
   public unwrap(): T | never {
-    if (!this.ok) {
-      throw new Error(
-        `Failed to unwrap result with error: ${this.error!.message}`
-      )
-    }
-    return this.value as T
+    if (this.isOk()) return this.value
+    throw new Error(
+      `Failed to unwrap result with error: ${this.error?.message}`
+    )
   }
 
   /**
@@ -241,7 +239,8 @@ export class Try {
 }
 
 /**
- * ## Value / Error Tuple (VET)
+ * ## Value-Error Tuple
+ *
  * Shorthand utility for calling `Try.catch(fn)` which returns either
  * a value or error tuple.
  *
