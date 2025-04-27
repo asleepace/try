@@ -1,5 +1,7 @@
 # Try
 
+![try-catch-cover](https://github.com/user-attachments/assets/043b452a-56c5-4697-aa79-c5a059c5f6c6)
+
 Type-safe error handling primitives for modern JavaScript & TypeScript projects.
 
 ```ts
