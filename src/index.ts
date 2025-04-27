@@ -166,17 +166,48 @@ export class Res<T> extends Array {
   }
 }
 
+/**
+ * ## Try
+ *
+ * This class provides several utility methods for error handling and catching
+ * exceptions and return them as result tuples containing either an error or
+ * a value (see `Res` class).
+ *
+ * ```ts
+ * const [json, error] = Try.catch(() => JSON.parse(userData))
+ *
+ * if (!error) return json.user // type-safe!
+ *
+ * const result = await Try.catch(fetchUser)  // supports async / await
+ *
+ * if (result.ok) return result.unwrap()  // powerful result types
+ *
+ * console.warn(result.error.message) //  exceptions are converted to Errors
+ * ```
+ *
+ * For a more shorthand version see the value-error-tuple (vet) utility,
+ * which can be used like so:
+ *
+ * ```ts
+ * import { vet } from '@asleepace/try'
+ *
+ * return vet(() => response.json()).unwrapOr(defaultValue)
+ * ```
+ *
+ * For more information and detailed usage on the specification:
+ *
+ * @see https://github.com/asleepace/try
+ *
+ */
 export class Try {
   /**
-   * # Try / Catch
-   *
    * Simple error handling utility which will invoke the provided function and
    * catch any thrown errors, the result of the function execution will then be
    * returned as a result tuple.
    *
    * ```ts
    *  // Simple example for common operations...
-   *  const [url, error] = Try.catch(() => new URL(userInput))  // call sync
+   *  const [url, error] = Try.catch(() => new URL(userInput))  // call synchronously
    *
    *  if (error) return console.warn(error.message)
    *
@@ -216,7 +247,7 @@ export class Try {
  *
  * ```ts
  * // initializing a url from user input
- * const [link, error] = vet(() => new URL("http://example.com/" + userInput))
+ * const [link, error] = vet(() => new URL(userInput))
  *
  * if (!error) return link.href
  * ```
