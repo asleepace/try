@@ -1,14 +1,15 @@
 /**
- * ## Result Tuple Definitions
- *
- * The following definitions are for the result object returned by the try catch
- * method.
+ * Primitive result tuple which contains a value.
  */
 export type OkTuple<T> = [T, undefined]
+
+/**
+ * Primitive result tuple which contains an error.
+ */
 export type ErrorTuple = [undefined, Error]
 
 /**
- * Result tuple which represents a value and no error.
+ * Result tuple which contains a value.
  */
 export type TryResultOk<T> = Res<T> & {
   0: T
@@ -20,7 +21,7 @@ export type TryResultOk<T> = Res<T> & {
 }
 
 /**
- * Result tuple which represents a caught exception.
+ * Result tuple which contains an error.
  */
 export type TryResultError = Res<never> & {
   0: undefined
@@ -32,7 +33,7 @@ export type TryResultError = Res<never> & {
 }
 
 /**
- * Result tuple returned by `Try.catch`
+ * Result tuple returned from calling `Try.catch(fn)`
  */
 export type TryResult<T> = TryResultOk<T> | TryResultError
 
@@ -44,6 +45,13 @@ export type TryResult<T> = TryResultOk<T> | TryResultError
  *
  */
 export class Res<T> extends Array {
+  /**
+   * Helper to convert a caught exception to an Error instance.
+   */
+  static toError = (exception: unknown): Error => {
+    return exception instanceof Error ? exception : new Error(String(exception))
+  }
+
   /**
    * Helper methods for instantiating via a tuple.
    */
@@ -57,9 +65,8 @@ export class Res<T> extends Array {
     return Res.from([value, undefined])
   }
 
-  static err<G>(e: unknown): TryResultError {
-    const error = e instanceof Error ? e : new Error(String(e))
-    return Res.from([undefined, error])
+  static err<G>(exception: unknown): TryResultError {
+    return Res.from([undefined, Res.toError(exception)])
   }
 
   declare 0: T | undefined
@@ -86,16 +93,22 @@ export class Res<T> extends Array {
   }
 
   /**
-   * Will return `true` if the result error is `undefined`.
+   * Getter which returns `true` if the error value is `undefined`.
    */
   get ok(): boolean {
     return this.error === undefined
   }
 
+  /**
+   * Returns true if this is the `TryResultOk<T>` variant.
+   */
   public isOk(): this is TryResultOk<T> {
     return this.error === undefined
   }
 
+  /**
+   * Returns true if this is the `TryResultError` variant.
+   */
   public isErr(): this is TryResultError {
     return this.error !== undefined
   }
@@ -134,11 +147,14 @@ export class Res<T> extends Array {
    */
   public or = Try.catch
 
-  toString(): string {
+  /**
+   * Converts this to a human readable string.
+   */
+  public toString(): string {
     if (this.ok) {
       return `Result.Ok(${String(this.value)})`
     } else {
-      return `Result.Error(${this.error!.message})`
+      return `Result.Error(${this.error?.message})`
     }
   }
 
