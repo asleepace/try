@@ -6,6 +6,10 @@
  */
 export type OkTuple<T> = [T, undefined]
 export type ErrorTuple = [undefined, Error]
+
+/**
+ * Result tuple which represents a value and no error.
+ */
 export type TryResultOk<T> = Res<T> & {
   0: T
   1: undefined
@@ -15,6 +19,9 @@ export type TryResultOk<T> = Res<T> & {
   or: typeof Try.catch
 }
 
+/**
+ * Result tuple which represents a caught exception.
+ */
 export type TryResultError = Res<never> & {
   0: undefined
   1: Error
@@ -24,6 +31,9 @@ export type TryResultError = Res<never> & {
   or: typeof Try.catch
 }
 
+/**
+ * Result tuple returned by `Try.catch`
+ */
 export type TryResult<T> = TryResultOk<T> | TryResultError
 
 /**
@@ -96,7 +106,7 @@ export class Res<T> extends Array {
    *
    * @see `unwrapOr(fallback)` for a safer option.
    */
-  unwrap(): T | never {
+  public unwrap(): T | never {
     if (!this.ok) {
       throw new Error(
         `Failed to unwrap result with error: ${this.error!.message}`
@@ -109,7 +119,7 @@ export class Res<T> extends Array {
    * Will unwrap the result tuple and return the value if present,
    * otherwise will return the provided fallback.
    */
-  unwrapOr<G>(fallback: G): T | G {
+  public unwrapOr<G>(fallback: G): T | G {
     return this.value ?? fallback
   }
 
@@ -122,7 +132,7 @@ export class Res<T> extends Array {
    *    .unwrapOr(new URL(`https://default.com`))
    * ```
    */
-  or = Try.catch
+  public or = Try.catch
 
   toString(): string {
     if (this.ok) {
