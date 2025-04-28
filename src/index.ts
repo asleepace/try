@@ -6,12 +6,12 @@ export type OkTuple<T> = [T, undefined]
 /**
  * Primitive result tuple which contains an error.
  */
-export type ErrorTuple = [undefined, Error]
+export type ErrorTuple<E = Error> = [undefined, E]
 
 /**
  * Result tuple which contains a value.
  */
-export type TryResultOk<T> = Res<T> & {
+export type TryResultOk<T, E> = Res<T, E> & {
   0: T
   1: undefined
   value: T
@@ -23,7 +23,7 @@ export type TryResultOk<T> = Res<T> & {
 /**
  * Result tuple which contains an error.
  */
-export type TryResultError = Res<never> & {
+export type TryResultError<T, E> = Res<never, E> & {
   0: undefined
   1: Error
   value: undefined
@@ -35,7 +35,9 @@ export type TryResultError = Res<never> & {
 /**
  * Result tuple returned from calling `Try.catch(fn)`
  */
-export type TryResult<T> = TryResultOk<T> | TryResultError
+export type TryResult<T, E = Error> =
+  | TryResultOk<T, never>
+  | TryResultError<never, E>
 
 /**
  * ## Res
@@ -44,7 +46,7 @@ export type TryResult<T> = TryResultOk<T> | TryResultError
  * several convenience methods for accessing data and checking types.
  *
  */
-export class Res<T> extends Array {
+export class Res<T, E> extends Array {
   /**
    * Helper to convert a caught exception to an Error instance.
    */
@@ -55,24 +57,26 @@ export class Res<T> extends Array {
   /**
    * Helper methods for instantiating via a tuple.
    */
-  static from<G>(tuple: ErrorTuple): TryResultError
-  static from<G>(tuple: OkTuple<G>): TryResultOk<G>
-  static from<G>(tuple: OkTuple<G> | ErrorTuple): TryResult<G> {
-    return new Res(tuple) as TryResult<G>
+  static from<G, Err = Error>(tuple: ErrorTuple): TryResultError<never, Err>
+  static from<G, Err = Error>(tuple: OkTuple<G>): TryResultOk<G, never>
+  static from<G, Err = Error>(
+    tuple: OkTuple<G> | ErrorTuple
+  ): TryResult<G, Err> {
+    return new Res(tuple) as TryResult<G, Err>
   }
 
-  static ok<G>(value: G): TryResultOk<G> {
+  static ok<G>(value: G): TryResultOk<G, never> {
     return Res.from([value, undefined])
   }
 
-  static err<G>(exception: unknown): TryResultError {
+  static err<Err>(exception: unknown): TryResultError<never, Err> {
     return Res.from([undefined, Res.toError(exception)])
   }
 
   declare 0: T | undefined
-  declare 1: Error | undefined
+  declare 1: E | undefined
 
-  constructor([value, error]: OkTuple<T> | ErrorTuple) {
+  constructor([value, error]: OkTuple<T> | ErrorTuple<E>) {
     super(2)
     this[0] = value
     this[1] = error
@@ -88,7 +92,7 @@ export class Res<T> extends Array {
   /**
    * Getter which returns the error in the result tuple.
    */
-  get error(): Error | undefined {
+  get error(): E | undefined {
     return this[1]
   }
 
@@ -102,14 +106,14 @@ export class Res<T> extends Array {
   /**
    * Returns true if this is the `TryResultOk<T>` variant.
    */
-  public isOk(): this is TryResultOk<T> {
+  public isOk(): this is TryResultOk<T, never> {
     return this.error === undefined
   }
 
   /**
    * Returns true if this is the `TryResultError` variant.
    */
-  public isErr(): this is TryResultError {
+  public isErr(): this is TryResultError<never, E> {
     return this.error !== undefined
   }
 
@@ -121,9 +125,8 @@ export class Res<T> extends Array {
    */
   public unwrap(): T | never {
     if (this.isOk()) return this.value
-    throw new Error(
-      `Failed to unwrap result with error: ${this.error?.message}`
-    )
+    console.warn(`Failed to unwrap result with error: ${this.error}`)
+    throw this.error
   }
 
   /**
@@ -152,7 +155,7 @@ export class Res<T> extends Array {
     if (this.ok) {
       return `Result.Ok(${String(this.value)})`
     } else {
-      return `Result.Error(${this.error?.message})`
+      return `Result.Error(${this.error})`
     }
   }
 
@@ -217,12 +220,12 @@ export class Try {
    *  return jsonData
    * ```
    */
-  static catch<T>(fn: () => never): TryResultError
-  static catch<T>(fn: () => Promise<T>): Promise<TryResult<T>>
-  static catch<T>(fn: () => T): TryResult<T>
-  static catch<T>(
+  static catch<T, Err = Error>(fn: () => never): TryResultError<never, Err>
+  static catch<T, Err = Error>(fn: () => Promise<T>): Promise<TryResult<T, Err>>
+  static catch<T, Err = Error>(fn: () => T): TryResult<T, Err>
+  static catch<T, Err = Error>(
     fn: () => T | Promise<T>
-  ): TryResult<T> | Promise<TryResult<T>> {
+  ): TryResult<T, Err> | Promise<TryResult<T, Err>> {
     try {
       const output = fn()
       if (output instanceof Promise) {
