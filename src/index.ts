@@ -274,6 +274,7 @@ export class Try {
    *
    * if (result.isOK()) return result.hostname
    * ```
+   * @note this is a beta feature and subject to change.
    *
    */
   static init<T, A extends any[] = any[], Err extends Error = Error>(
