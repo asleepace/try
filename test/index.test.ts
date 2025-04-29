@@ -550,3 +550,15 @@ test('Can call Try.expect with custom error type as first generic argument', () 
   expect(result.error!.code).toBe(117)
   expect(result.toString()).toBe('Result.Error(MyCustomError)')
 })
+
+/**
+ * Check if `Try.init(URL, urlString)` works as expected.
+ */
+test('Can call Try.init() to instantiate an instance of a class', () => {
+  const result = Try.init(URL, 'https://asleepace.com/')
+  expect(result.isOk())
+  if (result.isOk()) {
+    expect(result.value.href).toEqual('https://asleepace.com/')
+  }
+  expect(result.value instanceof URL)
+})

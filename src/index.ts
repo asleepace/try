@@ -180,6 +180,13 @@ export class Res<T, E extends Error = Error> extends Array {
 }
 
 /**
+ * Special Types
+ */
+type GenericConstructor<T, Args extends any[] = any[]> = {
+  new (...args: Args): T
+}
+
+/**
  * ## Try
  *
  * This class provides several utility methods for error handling and catching
@@ -254,6 +261,18 @@ export class Try {
     } catch (e) {
       return Res.err(e)
     }
+  }
+
+  /**
+   * Utility for initializing a class instance
+   */
+  static init<T, A extends any[] = any[], Err extends Error = Error>(
+    ctor: GenericConstructor<T, A>,
+    ...args: A
+  ) {
+    return Try.catch<InstanceType<typeof ctor>, Err>(() => {
+      return new ctor(...args)
+    })
   }
 }
 
