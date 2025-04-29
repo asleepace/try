@@ -569,7 +569,30 @@ test('Can call Try.init() to instantiate an instance of a class', () => {
 test('Can call Try.init() to instantiate an instance of a class', () => {
   // @ts-ignore
   const result = Try.init(URL, 'https://asleepace.com/', 123, 435)
-  console.log(result.value)
   expect(result.isErr()).toBe(true)
   expect(result.value instanceof URL).toBe(false)
+})
+
+/**
+ * Can set custom configuration for handling exceptions.
+ */
+test('Can set custom configuration for handling errors', () => {
+  class MyCustomError extends Error {
+    static isCustom = true
+    constructor(message: unknown) {
+      super(String(message))
+    }
+  }
+
+  Try.onException((exception) => {
+    return new MyCustomError(exception)
+  })
+
+  const result = Try.catch(() => {
+    throw new Error('always')
+  })
+
+  expect(result.isOk()).toBe(false)
+  expect(result.isErr()).toBe(true)
+  expect(result.error instanceof MyCustomError).toBe(true)
 })

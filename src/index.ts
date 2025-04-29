@@ -50,8 +50,16 @@ export class Res<T, E extends Error = Error> extends Array {
   /**
    * Helper to convert a caught exception to an Error instance.
    */
-  static toError = (exception: unknown): Error => {
-    return exception instanceof Error ? exception : new Error(String(exception))
+  static toError = <Err extends Error = Error>(exception: unknown) => {
+    return exception instanceof Error
+      ? exception
+      : (new Error(String(exception)) as Err)
+  }
+
+  static isError = <Err extends Error = Error>(
+    exception: unknown
+  ): exception is Err => {
+    return exception instanceof Error
   }
 
   /**
@@ -180,13 +188,6 @@ export class Res<T, E extends Error = Error> extends Array {
 }
 
 /**
- * Special Types
- */
-type GenericConstructor<T, Args extends any[] = any[]> = {
-  new (...args: Args): T
-}
-
-/**
  * ## Try
  *
  * This class provides several utility methods for error handling and catching
@@ -220,6 +221,14 @@ type GenericConstructor<T, Args extends any[] = any[]> = {
  *
  */
 export class Try {
+  /**
+   * Allows overriding some of the default properties such as how to handle exceptions
+   * and how tht result class should look.
+   */
+  static onException<E extends Error>(handler: (exception: unknown) => E) {
+    Res.toError = handler
+  }
+
   /**
    * Simple error handling utility which will invoke the provided function and
    * catch any thrown errors, the result of the function execution will then be
