@@ -264,13 +264,23 @@ export class Try {
   }
 
   /**
-   * Utility for initializing a class instance
+   * Utility for initializing a class instance with the given parameters
+   * and catching any exceptions thrown. Will return a result tuple of
+   * either the class instance or error thrown.
+   *
+   * ```ts
+   * // example instantiating a new URL instance
+   * const result = Try.init(URL, "https://www.typescriptlang.org/")
+   *
+   * if (result.isOK()) return result.hostname
+   * ```
+   *
    */
   static init<T, A extends any[] = any[], Err extends Error = Error>(
-    ctor: GenericConstructor<T, A>,
+    ctor: new (...args: A) => T,
     ...args: A
   ) {
-    return Try.catch<InstanceType<typeof ctor>, Err>(() => {
+    return Try.catch<T, Err>(() => {
       return new ctor(...args)
     })
   }
