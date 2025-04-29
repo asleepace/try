@@ -471,19 +471,49 @@ test('Can create result tuple with Res.ok', () => {
   expect(edgeCase1.unwrap()).toBeUndefined()
 })
 
-
 test('Can handle multiple statements', () => {
-
-  const userInput = ""
-  const INVALID_CHARS = /[A-Z]/g
-  const FALLBACK_URL = new URL("https://example.com")
+  const userInput = ''
+  const FALLBACK_URL = new URL('https://example.com')
 
   const url = Try.catch(() => new URL(userInput))
-  .or(() => new URL(`https://${userInput}`))
-  .or(() => new URL(`https://${userInput.replace('http://', '')}`))
-  .or(() => new URL(`https://${userInput.split('://')[1]!.trim()}`))
-  .unwrapOr(new URL(FALLBACK_URL))
+    .or(() => new URL(`https://${userInput}`))
+    .or(() => new URL(`https://${userInput.replace('http://', '')}`))
+    .or(() => new URL(`https://${userInput.split('://')[1]!.trim()}`))
+    .unwrapOr(new URL(FALLBACK_URL))
 
-  expect(url.href).toBe("https://example.com/")
+  expect(url.href).toBe('https://example.com/')
+})
 
+/**
+ * Check if caller can specify customer error type.
+ *  - Create Error subclass
+ *  - Create Fn which can throw custom Error
+ *  - Check if the return types are correct
+ *  - Can access custom properties
+ */
+test('Can specify specific type of Error to expect', () => {
+  class CustomError extends Error {
+    public name = 'MyCustomError'
+    public code = 117
+    get [Symbol.toStringTag]() {
+      console.log('toStringTag called!')
+      return 'CustomError'
+    }
+  }
+
+  function canThrow(): string | never {
+    if (Math.random() < 1.0) {
+      throw new CustomError()
+    } else {
+      return 'hello'
+    }
+  }
+
+  const result = Try.catch<string, CustomError>(canThrow)
+  expect(result.ok).toBe(false)
+  expect(result.isOk()).toBe(false)
+  expect(result.isErr()).toBe(true)
+  expect(result.error instanceof CustomError).toBe(true)
+  expect(result.error!.code).toBe(117)
+  expect(result.toString()).toBe('Result.Error(MyCustomError)')
 })
