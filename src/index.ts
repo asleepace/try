@@ -6,7 +6,7 @@ export type OkTuple<T> = [T, undefined]
 /**
  * Primitive result tuple which contains an error.
  */
-export type ErrorTuple = [undefined, Error]
+export type ErrorTuple<E = Error> = [undefined, E]
 
 /**
  * Result tuple which contains a value.
@@ -23,7 +23,7 @@ export type TryResultOk<T> = Res<T> & {
 /**
  * Result tuple which contains an error.
  */
-export type TryResultError = Res<never> & {
+export type TryResultError<E = Error> = Res<never> & {
   0: undefined
   1: Error
   value: undefined
@@ -35,7 +35,7 @@ export type TryResultError = Res<never> & {
 /**
  * Result tuple returned from calling `Try.catch(fn)`
  */
-export type TryResult<T> = TryResultOk<T> | TryResultError
+export type TryResult<T, E = Error> = TryResultOk<T> | TryResultError<E>
 
 /**
  * ## Res
@@ -44,7 +44,7 @@ export type TryResult<T> = TryResultOk<T> | TryResultError
  * several convenience methods for accessing data and checking types.
  *
  */
-export class Res<T> extends Array {
+export class Res<T, E = Error> extends Array {
   /**
    * Helper to convert a caught exception to an Error instance.
    */
@@ -55,24 +55,26 @@ export class Res<T> extends Array {
   /**
    * Helper methods for instantiating via a tuple.
    */
-  static from<G>(tuple: ErrorTuple): TryResultError
-  static from<G>(tuple: OkTuple<G>): TryResultOk<G>
-  static from<G>(tuple: OkTuple<G> | ErrorTuple): TryResult<G> {
-    return new Res(tuple) as TryResult<G>
+  static from<Val, Err = Error>(tuple: ErrorTuple<Err>): TryResultError<Err>
+  static from<Val, Err = Error>(tuple: OkTuple<Val>): TryResultOk<Val>
+  static from<Val, Err = Error>(
+    tuple: OkTuple<Val> | ErrorTuple
+  ): TryResult<Val, Err> {
+    return new Res(tuple) as TryResult<Val, Err>
   }
 
-  static ok<G>(value: G): TryResultOk<G> {
+  static ok<Val>(value: Val): TryResultOk<Val> {
     return Res.from([value, undefined])
   }
 
-  static err<G>(exception: unknown): TryResultError {
+  static err<Err = Error>(exception: unknown): TryResultError<Err> {
     return Res.from([undefined, Res.toError(exception)])
   }
 
   declare 0: T | undefined
-  declare 1: Error | undefined
+  declare 1: E | undefined
 
-  constructor([value, error]: OkTuple<T> | ErrorTuple) {
+  constructor([value, error]: OkTuple<T> | ErrorTuple<E>) {
     super(2)
     this[0] = value
     this[1] = error
@@ -88,7 +90,7 @@ export class Res<T> extends Array {
   /**
    * Getter which returns the error in the result tuple.
    */
-  get error(): Error | undefined {
+  get error(): E | undefined {
     return this[1]
   }
 
@@ -109,7 +111,7 @@ export class Res<T> extends Array {
   /**
    * Returns true if this is the `TryResultError` variant.
    */
-  public isErr(): this is TryResultError {
+  public isErr(): this is TryResultError<E> {
     return this.error !== undefined
   }
 
@@ -121,9 +123,8 @@ export class Res<T> extends Array {
    */
   public unwrap(): T | never {
     if (this.isOk()) return this.value
-    throw new Error(
-      `Failed to unwrap result with error: ${this.error?.message}`
-    )
+    console.warn(`Failed to unwrap result with error: ${this.error}`)
+    throw this.error
   }
 
   /**
@@ -152,7 +153,7 @@ export class Res<T> extends Array {
     if (this.ok) {
       return `Result.Ok(${String(this.value)})`
     } else {
-      return `Result.Error(${this.error?.message})`
+      return `Result.Error(${this.error})`
     }
   }
 
@@ -217,12 +218,12 @@ export class Try {
    *  return jsonData
    * ```
    */
-  static catch<T>(fn: () => never): TryResultError
-  static catch<T>(fn: () => Promise<T>): Promise<TryResult<T>>
-  static catch<T>(fn: () => T): TryResult<T>
-  static catch<T>(
+  static catch<T, E = Error>(fn: () => never): TryResultError<E>
+  static catch<T, E = Error>(fn: () => Promise<T>): Promise<TryResult<T, E>>
+  static catch<T, E = Error>(fn: () => T): TryResult<T, E>
+  static catch<T, E = Error>(
     fn: () => T | Promise<T>
-  ): TryResult<T> | Promise<TryResult<T>> {
+  ): TryResult<T, E> | Promise<TryResult<T, E>> {
     try {
       const output = fn()
       if (output instanceof Promise) {
