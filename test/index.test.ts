@@ -556,9 +556,20 @@ test('Can call Try.expect with custom error type as first generic argument', () 
  */
 test('Can call Try.init() to instantiate an instance of a class', () => {
   const result = Try.init(URL, 'https://asleepace.com/')
-  expect(result.isOk())
+  expect(result.isOk()).toBe(true)
   if (result.isOk()) {
     expect(result.value.href).toEqual('https://asleepace.com/')
   }
-  expect(result.value instanceof URL)
+  expect(result.value instanceof URL).toBe(true)
+})
+
+/**
+ * Check if `Try.init(URL)` works with invalid parameters.
+ */
+test('Can call Try.init() to instantiate an instance of a class', () => {
+  // @ts-ignore
+  const result = Try.init(URL, 'https://asleepace.com/', 123, 435)
+  console.log(result.value)
+  expect(result.isErr()).toBe(true)
+  expect(result.value instanceof URL).toBe(false)
 })
