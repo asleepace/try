@@ -11,7 +11,7 @@ export type ErrorTuple<E = Error> = [undefined, E]
 /**
  * Result tuple which contains a value.
  */
-export type TryResultOk<T, E> = Res<T, E> & {
+export type TryResultOk<T, E = Error> = Res<T, never> & {
   0: T
   1: undefined
   value: T
@@ -23,7 +23,7 @@ export type TryResultOk<T, E> = Res<T, E> & {
 /**
  * Result tuple which contains an error.
  */
-export type TryResultError<T, E> = Res<never, E> & {
+export type TryResultError<T, E = Error> = Res<never, E> & {
   0: undefined
   1: Error
   value: undefined
@@ -46,7 +46,7 @@ export type TryResult<T, E = Error> =
  * several convenience methods for accessing data and checking types.
  *
  */
-export class Res<T, E> extends Array {
+export class Res<T, E = Error> extends Array {
   /**
    * Helper to convert a caught exception to an Error instance.
    */
@@ -57,19 +57,19 @@ export class Res<T, E> extends Array {
   /**
    * Helper methods for instantiating via a tuple.
    */
-  static from<G, Err = Error>(tuple: ErrorTuple): TryResultError<never, Err>
-  static from<G, Err = Error>(tuple: OkTuple<G>): TryResultOk<G, never>
-  static from<G, Err = Error>(
-    tuple: OkTuple<G> | ErrorTuple
-  ): TryResult<G, Err> {
-    return new Res(tuple) as TryResult<G, Err>
+  static from<Val, Err = Error>(tuple: ErrorTuple): TryResultError<never, Err>
+  static from<Val, Err = Error>(tuple: OkTuple<Val>): TryResultOk<Val, never>
+  static from<Val, Err = Error>(
+    tuple: OkTuple<Val> | ErrorTuple
+  ): TryResult<Val, Err> {
+    return new Res(tuple) as TryResult<Val, Err>
   }
 
-  static ok<G>(value: G): TryResultOk<G, never> {
+  static ok<Val>(value: Val): TryResultOk<Val, never> {
     return Res.from([value, undefined])
   }
 
-  static err<Err>(exception: unknown): TryResultError<never, Err> {
+  static err<Err = Error>(exception: unknown): TryResultError<never, Err> {
     return Res.from([undefined, Res.toError(exception)])
   }
 

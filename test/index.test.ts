@@ -454,7 +454,7 @@ test('Can call toString on Res class', () => {
   const result2 = Try.catch(() => {
     throw new Error('456')
   })
-  expect(result2.toString()).toBe('Result.Error(456)')
+  expect(result2.toString()).toBe('Result.Error(Error: 456)')
 })
 
 test('Can create result tuple with Res.ok', () => {
@@ -469,4 +469,21 @@ test('Can create result tuple with Res.ok', () => {
   expect(edgeCase1.isOk()).toBe(true)
   expect(edgeCase1.isErr()).toBe(false)
   expect(edgeCase1.unwrap()).toBeUndefined()
+})
+
+
+test('Can handle multiple statements', () => {
+
+  const userInput = ""
+  const INVALID_CHARS = /[A-Z]/g
+  const FALLBACK_URL = new URL("https://example.com")
+
+  const url = Try.catch(() => new URL(userInput))
+  .or(() => new URL(`https://${userInput}`))
+  .or(() => new URL(`https://${userInput.replace('http://', '')}`))
+  .or(() => new URL(`https://${userInput.split('://')[1]!.trim()}`))
+  .unwrapOr(new URL(FALLBACK_URL))
+
+  expect(url.href).toBe("https://example.com/")
+
 })
