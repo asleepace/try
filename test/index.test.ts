@@ -21,6 +21,7 @@ test('Can use vet shorthand utility with or chaining', () => {
   expect(link instanceof URL).toBe(true)
 })
 
+// Result can call result helper methods isOk and isErr
 test('Res can call the isOk() and isErr() methods', async () => {
   let resultError = Try.catch(() => {
     throw new Error('alwaysThrows')
@@ -510,6 +511,38 @@ test('Can specify specific type of Error to expect', () => {
   }
 
   const result = Try.catch<string, CustomError>(canThrow)
+  expect(result.ok).toBe(false)
+  expect(result.isOk()).toBe(false)
+  expect(result.isErr()).toBe(true)
+  expect(result.error instanceof CustomError).toBe(true)
+  expect(result.error!.code).toBe(117)
+  expect(result.toString()).toBe('Result.Error(MyCustomError)')
+})
+
+/**
+ * Check if `Try.expect()` works as expected and contains proper types.
+ */
+test('Can call Try.expect with custom error type as first generic argument', () => {
+  class CustomError extends Error {
+    public name = 'MyCustomError'
+    public code = 117
+    get [Symbol.toStringTag]() {
+      console.log('toStringTag called!')
+      return 'CustomError'
+    }
+  }
+
+  class CustomObject {}
+
+  function canThrow(): CustomObject | never {
+    if (Math.random() < 1.0) {
+      throw new CustomError()
+    } else {
+      return new CustomObject()
+    }
+  }
+
+  const result = Try.catch<CustomObject, CustomError>(canThrow)
   expect(result.ok).toBe(false)
   expect(result.isOk()).toBe(false)
   expect(result.isErr()).toBe(true)

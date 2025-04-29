@@ -6,12 +6,12 @@ export type OkTuple<T> = [T, undefined]
 /**
  * Primitive result tuple which contains an error.
  */
-export type ErrorTuple<E = Error> = [undefined, E]
+export type ErrorTuple<E extends Error = Error> = [undefined, E]
 
 /**
  * Result tuple which contains a value.
  */
-export type TryResultOk<T, E = Error> = Res<T, never> & {
+export type TryResultOk<T, E extends Error = Error> = Res<T, never> & {
   0: T
   1: undefined
   value: T
@@ -23,7 +23,7 @@ export type TryResultOk<T, E = Error> = Res<T, never> & {
 /**
  * Result tuple which contains an error.
  */
-export type TryResultError<T, E = Error> = Res<never, E> & {
+export type TryResultError<T, E extends Error = Error> = Res<never, E> & {
   0: undefined
   1: Error
   value: undefined
@@ -35,7 +35,7 @@ export type TryResultError<T, E = Error> = Res<never, E> & {
 /**
  * Result tuple returned from calling `Try.catch(fn)`
  */
-export type TryResult<T, E = Error> =
+export type TryResult<T, E extends Error = Error> =
   | TryResultOk<T, never>
   | TryResultError<never, E>
 
@@ -46,7 +46,7 @@ export type TryResult<T, E = Error> =
  * several convenience methods for accessing data and checking types.
  *
  */
-export class Res<T, E = Error> extends Array {
+export class Res<T, E extends Error = Error> extends Array {
   /**
    * Helper to convert a caught exception to an Error instance.
    */
@@ -57,19 +57,31 @@ export class Res<T, E = Error> extends Array {
   /**
    * Helper methods for instantiating via a tuple.
    */
-  static from<Val, Err = Error>(tuple: ErrorTuple): TryResultError<never, Err>
-  static from<Val, Err = Error>(tuple: OkTuple<Val>): TryResultOk<Val, never>
-  static from<Val, Err = Error>(
+  static from<Val, Err extends Error = Error>(
+    tuple: ErrorTuple
+  ): TryResultError<never, Err>
+  static from<Val, Err extends Error = Error>(
+    tuple: OkTuple<Val>
+  ): TryResultOk<Val, never>
+  static from<Val, Err extends Error = Error>(
     tuple: OkTuple<Val> | ErrorTuple
   ): TryResult<Val, Err> {
     return new Res(tuple) as TryResult<Val, Err>
   }
 
+  /**
+   * Instantiate a new result tuple with a value.
+   */
   static ok<Val>(value: Val): TryResultOk<Val, never> {
     return Res.from([value, undefined])
   }
 
-  static err<Err = Error>(exception: unknown): TryResultError<never, Err> {
+  /**
+   * Instantiate a new result tuple with an error.
+   */
+  static err<Err extends Error = Error>(
+    exception: unknown
+  ): TryResultError<never, Err> {
     return Res.from([undefined, Res.toError(exception)])
   }
 
@@ -220,11 +232,15 @@ export class Try {
    *  return jsonData
    * ```
    */
-  static catch<T, Err = Error>(fn: () => never): TryResultError<never, Err>
-  static catch<T, Err = Error>(fn: () => Promise<T>): Promise<TryResult<T, Err>>
-  static catch<T, Err = Error>(fn: () => T): TryResult<T, Err>
-  static catch<T, Err = Error>(
-    fn: () => T | Promise<T>
+  static catch<T, Err extends Error = Error>(
+    fn: () => never
+  ): TryResultError<never, Err>
+  static catch<T, Err extends Error = Error>(
+    fn: () => Promise<T>
+  ): Promise<TryResult<T, Err>>
+  static catch<T, Err extends Error = Error>(fn: () => T): TryResult<T, Err>
+  static catch<T, Err extends Error = Error>(
+    fn: () => T | never | Promise<T>
   ): TryResult<T, Err> | Promise<TryResult<T, Err>> {
     try {
       const output = fn()
