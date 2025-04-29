@@ -454,7 +454,7 @@ test('Can call toString on Res class', () => {
   const result2 = Try.catch(() => {
     throw new Error('456')
   })
-  expect(result2.toString()).toBe('Result.Error(456)')
+  expect(result2.toString()).toBe('Result.Error(Error: 456)')
 })
 
 test('Can create result tuple with Res.ok', () => {
@@ -469,4 +469,58 @@ test('Can create result tuple with Res.ok', () => {
   expect(edgeCase1.isOk()).toBe(true)
   expect(edgeCase1.isErr()).toBe(false)
   expect(edgeCase1.unwrap()).toBeUndefined()
+})
+
+test('Can expect different types of errors', () => {
+  class NotFound extends Error {
+    public code = 404
+  }
+  class NotAuthorized extends Error {
+    public code = 401
+  }
+  class ServerError extends Error {
+    public code = 500
+  }
+
+  function doSomething() {
+    if (Math.random() < 0.4) throw new ServerError()
+    if (Math.random() < 0.6) throw new NotFound()
+    if (Math.random() < 0.8) throw new NotAuthorized()
+    return 'success'
+  }
+
+  const result = Try.catch(doSomething)
+
+  if (result.expect(NotFound)) {
+    expect(result.error.code).toBe(404)
+  } else if (result.expect(NotAuthorized)) {
+    expect(result.error.code).toBe(401)
+  } else if (result.expect(ServerError)) {
+    expect(result.error.code).toBe(500)
+  } else if (result.expect(Error)) {
+    expect(result.error.message).toBe('')
+  } else {
+    expect(result.value).toBe('success')
+  }
+})
+
+test('Test can specify direct error type in isErr(exception) method', () => {
+  class CustomError extends Error {
+    public domain = 'test'
+  }
+
+  function doSomething() {
+    if (Math.random() < 1.0) throw new CustomError()
+    return 'done'
+  }
+
+  const result = Try.catch(doSomething)
+
+  if (result.isErr(CustomError)) {
+    expect(result.error.domain).toBe('test')
+  } else if (result.isErr()) {
+    expect(result.error.message).toBe('')
+  } else {
+    expect(result.value).toBe('done')
+  }
 })

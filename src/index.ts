@@ -11,7 +11,7 @@ export type ErrorTuple<E = Error> = [undefined, E]
 /**
  * Result tuple which contains a value.
  */
-export type TryResultOk<T> = Res<T> & {
+export type TryResultOk<T> = Res<T, never> & {
   0: T
   1: undefined
   value: T
@@ -23,14 +23,16 @@ export type TryResultOk<T> = Res<T> & {
 /**
  * Result tuple which contains an error.
  */
-export type TryResultError<E = Error> = Res<never> & {
+export type TryResultError<E = Error> = Res<never, E> & {
   0: undefined
-  1: Error
+  1: E
   value: undefined
-  error: Error
+  error: E
   ok: false
   or: typeof Try.catch
 }
+
+export type Constructor<T = any> = new (...args: any[]) => T
 
 /**
  * Result tuple returned from calling `Try.catch(fn)`
@@ -68,7 +70,7 @@ export class Res<T, E = Error> extends Array {
   }
 
   static err<Err = Error>(exception: unknown): TryResultError<Err> {
-    return Res.from([undefined, Res.toError(exception)])
+    return Res.from([undefined, Res.toError(exception) as Err])
   }
 
   declare 0: T | undefined
@@ -111,8 +113,26 @@ export class Res<T, E = Error> extends Array {
   /**
    * Returns true if this is the `TryResultError` variant.
    */
-  public isErr(): this is TryResultError<E> {
-    return this.error !== undefined
+  public isErr<Err extends new (...args: any[]) => any>(
+    exception: Err
+  ): this is TryResultError<InstanceType<Err>>
+  public isErr<Err extends Error>(
+    exception?: undefined
+  ): this is TryResultError<Err>
+  public isErr<Err extends Constructor>(
+    exception: Err
+  ): this is TryResultError<T>
+  public isErr<Err extends Constructor>(
+    exception?: Err
+  ): this is TryResultError<InstanceType<Err>> {
+    if (this.error === undefined) return false
+    if (exception && this.error instanceof exception) {
+      return true
+    } else if (exception) {
+      return false
+    } else {
+      return true
+    }
   }
 
   /**
@@ -133,6 +153,15 @@ export class Res<T, E = Error> extends Array {
    */
   public unwrapOr<G>(fallback: G): T | G {
     return this.value ?? fallback
+  }
+
+  /**
+   * Allows expecting specific types of errors.
+   */
+  public expect<E extends new (...args: any[]) => any>(
+    exception: E
+  ): this is TryResultError<InstanceType<E>> {
+    return this.isErr() && this.error instanceof exception
   }
 
   /**
@@ -253,3 +282,37 @@ export class Try {
  * ```
  */
 export const vet = Try.catch
+
+class NotFound extends Error {
+  url: string = ''
+  code = 404
+}
+
+class NotAuthorized extends Error {
+  path = '/admin'
+  code = 401
+}
+
+class ServerError extends Error {
+  status: string = ''
+  code = 500
+}
+
+const result = Try.catch(() => {
+  if (Math.random() < 0.3) throw new NotAuthorized()
+  if (Math.random() < 0.6) throw new NotFound()
+  if (Math.random() < 0.9) throw new ServerError()
+  return 'success'
+})
+
+if (result.expect(NotAuthorized)) {
+  console.warn(result.error.path)
+} else if (result.expect(NotFound)) {
+  console.warn(result.error.url)
+} else if (result.expect(ServerError)) {
+  console.warn(result.error.status)
+} else if (result.expect(Error)) {
+  console.warn(result.error.message)
+} else {
+  console.log(result.value.charAt(123))
+}

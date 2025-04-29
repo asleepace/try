@@ -47,5 +47,19 @@ async function catchSpecificException() {
     return 123
   }
 
-  const [value, error] = Try.catch(doSomething)
+  const result = Try.catch(doSomething)
+
+  switch (true) {
+    case result.expect(NotAuthorized):
+      console.warn('Not found!')
+      break
+    case result.expect(NotFound):
+      console.warn('Not authorized')
+      break
+    case result.expect(ServerError):
+      console.warn('Server error')
+      break
+    default:
+      console.warn('Error')
+  }
 }
