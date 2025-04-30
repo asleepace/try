@@ -21,6 +21,7 @@ test('Can use vet shorthand utility with or chaining', () => {
   expect(link instanceof URL).toBe(true)
 })
 
+// Result can call result helper methods isOk and isErr
 test('Res can call the isOk() and isErr() methods', async () => {
   let resultError = Try.catch(() => {
     throw new Error('alwaysThrows')
@@ -454,7 +455,7 @@ test('Can call toString on Res class', () => {
   const result2 = Try.catch(() => {
     throw new Error('456')
   })
-  expect(result2.toString()).toBe('Result.Error(456)')
+  expect(result2.toString()).toBe('Result.Error(Error: 456)')
 })
 
 test('Can create result tuple with Res.ok', () => {
@@ -469,4 +470,129 @@ test('Can create result tuple with Res.ok', () => {
   expect(edgeCase1.isOk()).toBe(true)
   expect(edgeCase1.isErr()).toBe(false)
   expect(edgeCase1.unwrap()).toBeUndefined()
+})
+
+test('Can handle multiple statements', () => {
+  const userInput = ''
+  const FALLBACK_URL = new URL('https://example.com')
+
+  const url = Try.catch(() => new URL(userInput))
+    .or(() => new URL(`https://${userInput}`))
+    .or(() => new URL(`https://${userInput.replace('http://', '')}`))
+    .or(() => new URL(`https://${userInput.split('://')[1]!.trim()}`))
+    .unwrapOr(new URL(FALLBACK_URL))
+
+  expect(url.href).toBe('https://example.com/')
+})
+
+/**
+ * Check if caller can specify customer error type.
+ *  - Create Error subclass
+ *  - Create Fn which can throw custom Error
+ *  - Check if the return types are correct
+ *  - Can access custom properties
+ */
+test('Can specify specific type of Error to expect', () => {
+  class CustomError extends Error {
+    public name = 'MyCustomError'
+    public code = 117
+    get [Symbol.toStringTag]() {
+      console.log('toStringTag called!')
+      return 'CustomError'
+    }
+  }
+
+  function canThrow(): string | never {
+    if (Math.random() < 1.0) {
+      throw new CustomError()
+    } else {
+      return 'hello'
+    }
+  }
+
+  const result = Try.catch<string, CustomError>(canThrow)
+  expect(result.ok).toBe(false)
+  expect(result.isOk()).toBe(false)
+  expect(result.isErr()).toBe(true)
+  expect(result.error instanceof CustomError).toBe(true)
+  expect(result.error!.code).toBe(117)
+  expect(result.toString()).toBe('Result.Error(MyCustomError)')
+})
+
+/**
+ * Check if `Try.expect()` works as expected and contains proper types.
+ */
+test('Can call Try.expect with custom error type as first generic argument', () => {
+  class CustomError extends Error {
+    public name = 'MyCustomError'
+    public code = 117
+    get [Symbol.toStringTag]() {
+      console.log('toStringTag called!')
+      return 'CustomError'
+    }
+  }
+
+  class CustomObject {}
+
+  function canThrow(): CustomObject | never {
+    if (Math.random() < 1.0) {
+      throw new CustomError()
+    } else {
+      return new CustomObject()
+    }
+  }
+
+  const result = Try.catch<CustomObject, CustomError>(canThrow)
+  expect(result.ok).toBe(false)
+  expect(result.isOk()).toBe(false)
+  expect(result.isErr()).toBe(true)
+  expect(result.error instanceof CustomError).toBe(true)
+  expect(result.error!.code).toBe(117)
+  expect(result.toString()).toBe('Result.Error(MyCustomError)')
+})
+
+/**
+ * Check if `Try.init(URL, urlString)` works as expected.
+ */
+test('Can call Try.init() to instantiate an instance of a class', () => {
+  const result = Try.init(URL, 'https://asleepace.com/')
+  expect(result.isOk()).toBe(true)
+  if (result.isOk()) {
+    expect(result.value.href).toEqual('https://asleepace.com/')
+  }
+  expect(result.value instanceof URL).toBe(true)
+})
+
+/**
+ * Check if `Try.init(URL)` works with invalid parameters.
+ */
+test('Can call Try.init() to instantiate an instance of a class', () => {
+  // @ts-ignore
+  const result = Try.init(URL, 'https://asleepace.com/', 123, 435)
+  expect(result.isErr()).toBe(true)
+  expect(result.value instanceof URL).toBe(false)
+})
+
+/**
+ * Can set custom configuration for handling exceptions.
+ */
+test('Can set custom configuration for handling errors', () => {
+  class MyCustomError extends Error {
+    static isCustom = true
+    constructor(message: unknown) {
+      super(String(message))
+    }
+  }
+
+  Try.onException((exception) => {
+    return new MyCustomError(exception)
+  })
+
+  const result = Try.catch(() => {
+    throw new Error('always')
+  })
+
+  expect(result.isOk()).toBe(false)
+  expect(result.isErr()).toBe(true)
+  expect(result.error instanceof MyCustomError).toBe(true)
 })

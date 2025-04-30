@@ -6,12 +6,12 @@ export type OkTuple<T> = [T, undefined]
 /**
  * Primitive result tuple which contains an error.
  */
-export type ErrorTuple = [undefined, Error]
+export type ErrorTuple<E extends Error = Error> = [undefined, E]
 
 /**
  * Result tuple which contains a value.
  */
-export type TryResultOk<T> = Res<T> & {
+export type TryResultOk<T, E extends Error = Error> = Res<T, never> & {
   0: T
   1: undefined
   value: T
@@ -23,7 +23,7 @@ export type TryResultOk<T> = Res<T> & {
 /**
  * Result tuple which contains an error.
  */
-export type TryResultError = Res<never> & {
+export type TryResultError<T, E extends Error = Error> = Res<never, E> & {
   0: undefined
   1: Error
   value: undefined
@@ -35,7 +35,9 @@ export type TryResultError = Res<never> & {
 /**
  * Result tuple returned from calling `Try.catch(fn)`
  */
-export type TryResult<T> = TryResultOk<T> | TryResultError
+export type TryResult<T, E extends Error = Error> =
+  | TryResultOk<T, never>
+  | TryResultError<never, E>
 
 /**
  * ## Res
@@ -44,35 +46,57 @@ export type TryResult<T> = TryResultOk<T> | TryResultError
  * several convenience methods for accessing data and checking types.
  *
  */
-export class Res<T> extends Array {
+export class Res<T, E extends Error = Error> extends Array {
   /**
    * Helper to convert a caught exception to an Error instance.
    */
-  static toError = (exception: unknown): Error => {
-    return exception instanceof Error ? exception : new Error(String(exception))
+  static toError = <Err extends Error = Error>(exception: unknown) => {
+    return exception instanceof Error
+      ? exception
+      : (new Error(String(exception)) as Err)
+  }
+
+  static isError = <Err extends Error = Error>(
+    exception: unknown
+  ): exception is Err => {
+    return exception instanceof Error
   }
 
   /**
    * Helper methods for instantiating via a tuple.
    */
-  static from<G>(tuple: ErrorTuple): TryResultError
-  static from<G>(tuple: OkTuple<G>): TryResultOk<G>
-  static from<G>(tuple: OkTuple<G> | ErrorTuple): TryResult<G> {
-    return new Res(tuple) as TryResult<G>
+  static from<Val, Err extends Error = Error>(
+    tuple: ErrorTuple
+  ): TryResultError<never, Err>
+  static from<Val, Err extends Error = Error>(
+    tuple: OkTuple<Val>
+  ): TryResultOk<Val, never>
+  static from<Val, Err extends Error = Error>(
+    tuple: OkTuple<Val> | ErrorTuple
+  ): TryResult<Val, Err> {
+    return new Res(tuple) as TryResult<Val, Err>
   }
 
-  static ok<G>(value: G): TryResultOk<G> {
+  /**
+   * Instantiate a new result tuple with a value.
+   */
+  static ok<Val>(value: Val): TryResultOk<Val, never> {
     return Res.from([value, undefined])
   }
 
-  static err<G>(exception: unknown): TryResultError {
+  /**
+   * Instantiate a new result tuple with an error.
+   */
+  static err<Err extends Error = Error>(
+    exception: unknown
+  ): TryResultError<never, Err> {
     return Res.from([undefined, Res.toError(exception)])
   }
 
   declare 0: T | undefined
-  declare 1: Error | undefined
+  declare 1: E | undefined
 
-  constructor([value, error]: OkTuple<T> | ErrorTuple) {
+  constructor([value, error]: OkTuple<T> | ErrorTuple<E>) {
     super(2)
     this[0] = value
     this[1] = error
@@ -88,7 +112,7 @@ export class Res<T> extends Array {
   /**
    * Getter which returns the error in the result tuple.
    */
-  get error(): Error | undefined {
+  get error(): E | undefined {
     return this[1]
   }
 
@@ -102,14 +126,14 @@ export class Res<T> extends Array {
   /**
    * Returns true if this is the `TryResultOk<T>` variant.
    */
-  public isOk(): this is TryResultOk<T> {
+  public isOk(): this is TryResultOk<T, never> {
     return this.error === undefined
   }
 
   /**
    * Returns true if this is the `TryResultError` variant.
    */
-  public isErr(): this is TryResultError {
+  public isErr(): this is TryResultError<never, E> {
     return this.error !== undefined
   }
 
@@ -121,9 +145,8 @@ export class Res<T> extends Array {
    */
   public unwrap(): T | never {
     if (this.isOk()) return this.value
-    throw new Error(
-      `Failed to unwrap result with error: ${this.error?.message}`
-    )
+    console.warn(`Failed to unwrap result with error: ${this.error}`)
+    throw this.error
   }
 
   /**
@@ -152,7 +175,7 @@ export class Res<T> extends Array {
     if (this.ok) {
       return `Result.Ok(${String(this.value)})`
     } else {
-      return `Result.Error(${this.error?.message})`
+      return `Result.Error(${this.error})`
     }
   }
 
@@ -199,6 +222,14 @@ export class Res<T> extends Array {
  */
 export class Try {
   /**
+   * Allows overriding some of the default properties such as how to handle exceptions
+   * and how tht result class should look.
+   */
+  static onException<E extends Error>(handler: (exception: unknown) => E) {
+    Res.toError = handler
+  }
+
+  /**
    * Simple error handling utility which will invoke the provided function and
    * catch any thrown errors, the result of the function execution will then be
    * returned as a result tuple.
@@ -217,12 +248,16 @@ export class Try {
    *  return jsonData
    * ```
    */
-  static catch<T>(fn: () => never): TryResultError
-  static catch<T>(fn: () => Promise<T>): Promise<TryResult<T>>
-  static catch<T>(fn: () => T): TryResult<T>
-  static catch<T>(
-    fn: () => T | Promise<T>
-  ): TryResult<T> | Promise<TryResult<T>> {
+  static catch<T, Err extends Error = Error>(
+    fn: () => never
+  ): TryResultError<never, Err>
+  static catch<T, Err extends Error = Error>(
+    fn: () => Promise<T>
+  ): Promise<TryResult<T, Err>>
+  static catch<T, Err extends Error = Error>(fn: () => T): TryResult<T, Err>
+  static catch<T, Err extends Error = Error>(
+    fn: () => T | never | Promise<T>
+  ): TryResult<T, Err> | Promise<TryResult<T, Err>> {
     try {
       const output = fn()
       if (output instanceof Promise) {
@@ -235,6 +270,29 @@ export class Try {
     } catch (e) {
       return Res.err(e)
     }
+  }
+
+  /**
+   * Utility for initializing a class instance with the given parameters
+   * and catching any exceptions thrown. Will return a result tuple of
+   * either the class instance or error thrown.
+   *
+   * ```ts
+   * // example instantiating a new URL instance
+   * const result = Try.init(URL, "https://www.typescriptlang.org/")
+   *
+   * if (result.isOK()) return result.hostname
+   * ```
+   * @note this is a beta feature and subject to change.
+   *
+   */
+  static init<T, A extends any[] = any[], Err extends Error = Error>(
+    ctor: new (...args: A) => T,
+    ...args: A
+  ) {
+    return Try.catch<T, Err>(() => {
+      return new ctor(...args)
+    })
   }
 }
 
