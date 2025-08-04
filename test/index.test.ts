@@ -1,7 +1,7 @@
 import { test, expect } from 'bun:test'
-import { Res, Try, vet } from '../src/index'
+import { Res, Try, vet, tryCatch } from '../src/index'
 
-// Can use the (vet) shorthand utility
+// Can use the (vet) shorthand utility (deprecated)
 test('Can use vet shorthand utility', () => {
   const [url] = vet(() => new URL('https://asleepace.com'))
   expect(url?.href).toBe('https://asleepace.com/')
@@ -10,9 +10,29 @@ test('Can use vet shorthand utility', () => {
   expect(err?.message).toBeDefined()
 })
 
-// Can use the (vet) shorthand utility
+// Can use the (vet) shorthand utility with or chaining (deprecated)
 test('Can use vet shorthand utility with or chaining', () => {
   const link = vet(() => new URL('asleepace.com'))
+    .or(() => new URL('https://aslee pace.com'))
+    .or(() => new URL('https://github.com'))
+    .unwrapOr(new URL('https://npm.com'))
+
+  expect(link.href).toBe('https://github.com/')
+  expect(link instanceof URL).toBe(true)
+})
+
+// Can use the (tryCatch) shorthand utility (recommended)
+test('Can use tryCatch shorthand utility', () => {
+  const [url] = tryCatch(() => new URL('https://asleepace.com'))
+  expect(url?.href).toBe('https://asleepace.com/')
+
+  const [, err] = tryCatch(() => new URL('https://asleep!@#$ace.com'))
+  expect(err?.message).toBeDefined()
+})
+
+// Can use the (tryCatch) shorthand utility with or chaining (recommended)
+test('Can use tryCatch shorthand utility with or chaining', () => {
+  const link = tryCatch(() => new URL('asleepace.com'))
     .or(() => new URL('https://aslee pace.com'))
     .or(() => new URL('https://github.com'))
     .unwrapOr(new URL('https://npm.com'))
@@ -89,6 +109,23 @@ test('Try.catch can catch asynchronous values', async () => {
   expect(result.unwrap()).toBe(456)
   expect(result.isOk()).toBe(true)
   expect(result.isErr()).toBe(false)
+})
+
+test('Try.catch can await returned promise values', async () => {
+  const result = await Try.catch(() => {
+    return Promise.resolve(123)
+  })
+  expect(result.isOk()).toBe(true)
+  expect(result.unwrap()).toBe(123)
+})
+
+test('Try.catch can await return promise rejections', async () => {
+  const result = await Try.catch(() => {
+    return Promise.reject('unknown')
+  })
+  expect(result.isOk()).toBe(false)
+  expect(result.isErr()).toBe(true)
+  expect(result.error?.message).toBe('unknown')
 })
 
 // Can extract errors from async functions

@@ -61,11 +61,17 @@ export class Res<T> extends Array {
     return new Res(tuple) as TryResult<G>
   }
 
+  /**
+   * Creates a successful result with the given value.
+   */
   static ok<G>(value: G): TryResultOk<G> {
     return Res.from([value, undefined])
   }
 
-  static err<G>(exception: unknown): TryResultError {
+  /**
+   * Creates an error result with the given exception.
+   */
+  static err(exception: unknown): TryResultError {
     return Res.from([undefined, Res.toError(exception)])
   }
 
@@ -148,7 +154,7 @@ export class Res<T> extends Array {
   /**
    * Converts this to a human readable string.
    */
-  public toString(): string {
+  public override toString(): string {
     if (this.ok) {
       return `Result.Ok(${String(this.value)})`
     } else {
@@ -241,8 +247,10 @@ export class Try {
 /**
  * ## Value-Error Tuple
  *
- * Shorthand utility for calling `Try.catch(fn)` which returns either
- * a value or error tuple.
+ * Shorthand utility for calling `Try.catch(fn)` which returns
+ * an error / value tuple.
+ *
+ * @deprecated Use `tryCatch` instead. This shorthand will be removed in a future version.
  *
  * ```ts
  * // initializing a url from user input
@@ -252,3 +260,17 @@ export class Try {
  * ```
  */
 export const vet = Try.catch
+
+/**
+ * ## tryCatch
+ *
+ * Single function with the same functionality as `Try.catch` which returns
+ * an error / value tuple.
+ *
+ * ```ts
+ * const [response, error] = await tryCatch(() => fetch('https://example.com'))
+ *
+ * if (!error) return response.json()
+ * ```
+ */
+export const tryCatch = Try.catch

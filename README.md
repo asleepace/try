@@ -29,14 +29,14 @@ bun add @asleepace/try
 The goal of this package is to provide concise, type-safe and easy to use tools for handling exceptions.
 
 ```ts
-import { Try } from '@asleepace/try'
+import { tryCatch } from '@asleepace/try'
 
-const [url, error] = Try.catch(() => new URL(userInput))
+const [url, error] = tryCatch(() => new URL(userInput))
 
 if (error) return console.warn(error.message)
 
-const [response, networkError] = await Try.catch(() => fetch(url))
-const [jsonData, parsingError] = await Try.catch(() => response!.json())
+const [response, networkError] = await tryCatch(() => fetch(url))
+const [jsonData, parsingError] = await tryCatch(() => response!.json())
 
 if (parsingError) return console.warn(parsingError.message)
 
@@ -114,21 +114,22 @@ Works with both synchronous and asynchronous functions, automatically returning 
 
 ## Shorthand
 
-This package also exports a shorthand utility called **vet** which stands for _value / error tuple_ and provides a more concise way to interact with this api.
+This package also exports a shorthand utility called **tryCatch** which provides a more concise way to interact with this api.
 
 ```ts
-// Add more examples of the VET shorthand
-import { vet } from '@asleepace/try'
+import { tryCatch } from '@asleepace/try'
 
 // Simple usage
-const [value] = vet(() => JSON.parse(data))
+const [value] = tryCatch(() => JSON.parse(data))
 
 // Only get the error
-const [, error] = vet(() => JSON.parse(data))
+const [, error] = tryCatch(() => JSON.parse(data))
 
 // With TypeScript generics for better type inference
-const [user] = vet<User>(() => getUserFromAPI())
+const [user] = tryCatch<User>(() => getUserFromAPI())
 ```
+
+> **Note**: The `vet` shorthand is deprecated and will be removed in a future version. Use `tryCatch` instead.
 
 ## Benefits
 
@@ -164,11 +165,11 @@ bun test
 
 ```ts
 // handle synchronous operations which can throw with ease...
-const encoded = Try.catch(() => JSON.stringify(userInput))
+const encoded = tryCatch(() => JSON.stringify(userInput))
 
 if (!encoded.ok) return encoded.error
 
-const [response, networkError] = await Try.catch(() =>
+const [response, networkError] = await tryCatch(() =>
   fetch('https://api.com/create', {
     method: 'POST',
     body: encoded.value,
@@ -177,7 +178,7 @@ const [response, networkError] = await Try.catch(() =>
 
 if (networkError) return networkError
 
-const [user, jsonError] = await Try.catch(response.json)
+const [user, jsonError] = await tryCatch(response.json)
 
 if (jsonError) return jsonError
 
@@ -188,7 +189,7 @@ return user
 
 ```tsx
 import React, { useEffect, useState } from 'react'
-import { Try } from '@asleepace/try'
+import { tryCatch } from '@asleepace/try'
 
 function UserProfile({ userId }) {
   const [user, setUser] = useState(null)
@@ -199,7 +200,7 @@ function UserProfile({ userId }) {
     async function loadUser() {
       setLoading(true)
 
-      const [userData, fetchError] = await Try.catch(async () => {
+      const [userData, fetchError] = await tryCatch(async () => {
         const response = await fetch(`/api/users/${userId}`)
         if (!response.ok) throw new Error(`HTTP error ${response.status}`)
         return response.json()
@@ -308,7 +309,32 @@ The returned result object includes several convenience properties and methods:
 - The returned result object is an instance of `TryResultClass`, enabling `instanceof` checks.
 - This allows for easier type checking and integration with existing code patterns.
 
+# TypeScript Configuration
+
+This package is designed to work with various TypeScript configurations. For optimal interop, ensure your `tsconfig.json` includes:
+
+```json
+{
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
+  }
+}
+```
+
+For strict mode projects, see [INTEROP.md](./INTEROP.md) for detailed configuration options.
+
 # Changelog
+
+## 0.2.2
+
+- Improved TypeScript interop with better module resolution
+- Added `exports` field for better bundler compatibility
+- Enhanced type definitions with better JSDoc comments
+- Added separate TypeScript configs for different environments
+- Improved error handling and type safety
+- Deprecated `vet` shorthand in favor of `tryCatch`
 
 ## 0.2.1
 
@@ -322,7 +348,7 @@ The returned result object includes several convenience properties and methods:
 
 ## 0.2.0
 
-- add `vet(fn)` shorthand
+- add `vet(fn)` shorthand (deprecated in 0.2.2, use `tryCatch` instead)
 - add convenience methods
 - Update `Result` class
 - Update test suite

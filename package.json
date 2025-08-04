@@ -24,15 +24,26 @@
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
   "files": [
     "dist"
   ],
   "scripts": {
     "build": "bun run tsc && bun build ./src/index.ts --outdir ./dist --target node",
+    "build:strict": "bun run tsc --project tsconfig.strict.json",
+    "build:node": "bun run tsc --project tsconfig.node.json",
     "npm:publish:dry": "bun run npm publish --dry-run --access=public",
     "npm:publish": "bun run npm publish --access=public",
     "npm:patch": "bun run npm version patch",
     "test": "bun test",
+    "test:strict": "bun run build:strict && bun test",
     "prepublishOnly": "bun run build"
   },
   "devDependencies": {
@@ -40,5 +51,8 @@
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
