@@ -135,6 +135,15 @@ export class Res<T, E = Error> extends Array {
     }
   }
 
+  public rethrow(): asserts this is TryResultOk<T> {
+    if (this.isErr()) throw this.error
+  }
+
+  public asserts(): asserts this is TryResultError {
+    if (this.isOk())
+      throw new Error('Attempted to match an error with a value present.')
+  }
+
   /**
    * Will return the value if present otherwise will re-throw the error,
    * recommended for development only.
@@ -142,9 +151,9 @@ export class Res<T, E = Error> extends Array {
    * @see `unwrapOr(fallback)` for a safer option.
    */
   public unwrap(): T | never {
-    if (this.isOk()) return this.value
+    this.rethrow()
     console.warn(`Failed to unwrap result with error: ${this.error}`)
-    throw this.error
+    return this.value
   }
 
   /**
@@ -192,6 +201,13 @@ export class Res<T, E = Error> extends Array {
   [Symbol.for('nodejs.util.inspect.custom')](): string {
     return this.toString()
   }
+
+  /**
+   * @note the issue is here, I would like the predicate passed to this class
+   * to have the correct types for the caller.
+   */
+
+  public matchException<P = E>(): TryResult<T, P> {}
 }
 
 /**

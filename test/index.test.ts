@@ -509,6 +509,13 @@ test('Test can specify direct error type in isErr(exception) method', () => {
     public domain = 'test'
   }
 
+  const example = new CustomError()
+  console.log(
+    'isCustomError instanceof CustomError',
+    example instanceof CustomError
+  )
+  console.log('isCustomError instanceof Error', example instanceof Error)
+
   function doSomething() {
     if (Math.random() < 1.0) throw new CustomError()
     return 'done'
@@ -517,8 +524,10 @@ test('Test can specify direct error type in isErr(exception) method', () => {
   const result = Try.catch(doSomething)
 
   if (result.isErr(CustomError)) {
+    expect(result.error instanceof CustomError).toBe(true)
     expect(result.error.domain).toBe('test')
   } else if (result.isErr()) {
+    expect(result instanceof Error).toBe(true)
     expect(result.error.message).toBe('')
   } else {
     expect(result.value).toBe('done')
