@@ -99,6 +99,31 @@ const user = result.unwrap() // User | never
 const user = result.unwrapOr(cachedUser) // User
 ```
 
+## Function Wrapping
+
+You can also wrap existing functions to make them safe:
+
+```ts
+import { Try } from '@asleepace/try'
+
+// Wrap built-in functions
+const safeParse = Try.wrap(JSON.parse)
+const [data, error] = safeParse('{"valid": "json"}')
+
+// Wrap custom functions
+const safeDivide = Try.wrap((a: number, b: number) => {
+  if (b === 0) throw new Error('Division by zero')
+  return a / b
+})
+
+const [result, error] = safeDivide(10, 2) // result = 5, error = undefined
+const [result2, error2] = safeDivide(10, 0) // result2 = undefined, error2 = Error
+
+// Wrap async functions
+const safeFetch = Try.wrap(fetch)
+const [response, error] = await safeFetch('https://api.example.com')
+```
+
 ## API
 
 ```ts
@@ -335,6 +360,7 @@ For strict mode projects, see [INTEROP.md](./INTEROP.md) for detailed configurat
 - Added separate TypeScript configs for different environments
 - Improved error handling and type safety
 - Deprecated `vet` shorthand in favor of `tryCatch`
+- Added `Try.wrap` for creating safe function wrappers
 
 ## 0.2.1
 

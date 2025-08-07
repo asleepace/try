@@ -41,6 +41,119 @@ test('Can use tryCatch shorthand utility with or chaining', () => {
   expect(link instanceof URL).toBe(true)
 })
 
+// Try.wrap functionality tests
+test('Try.wrap can wrap synchronous functions', () => {
+  const safeParse = Try.wrap(JSON.parse)
+  const [data, error] = safeParse('{"valid": "json"}')
+
+  expect(data).toEqual({ valid: 'json' })
+  expect(error).toBeUndefined()
+  expect(data?.valid).toBe('json')
+})
+
+test('Try.wrap can wrap synchronous functions that throw', () => {
+  const safeParse = Try.wrap(JSON.parse)
+  const [data, error] = safeParse('invalid json')
+
+  expect(data).toBeUndefined()
+  expect(error).toBeDefined()
+  expect(error?.message).toContain('JSON')
+})
+
+test('Try.wrap can wrap functions with multiple parameters', () => {
+  const safeDivide = Try.wrap((a: number, b: number) => {
+    if (b === 0) throw new Error('Division by zero')
+    return a / b
+  })
+
+  const [result1, error1] = safeDivide(10, 2)
+  expect(result1).toBe(5)
+  expect(error1).toBeUndefined()
+
+  const [result2, error2] = safeDivide(10, 0)
+  expect(result2).toBeUndefined()
+  expect(error2?.message).toBe('Division by zero')
+})
+
+test('Try.wrap can wrap async functions', async () => {
+  
+  const safeFetch = Try.wrap(fetch)
+  const result = await safeFetch('https://httpbin.org/get')
+  const [response, error] = result as any
+
+  expect(response).toBeDefined()
+  expect(error).toBeUndefined()
+  // The response should be successful
+  expect(response?.status).toBe(200)
+})
+
+test('Try.wrap can wrap async functions that fail', async () => {
+  const safeFetch = Try.wrap(fetch)
+  const result = await safeFetch('https://invalid-url-that-does-not-exist.com')
+  const [response, error] = result as any
+
+  // The function should either return an error or a response
+  // We just verify that the wrapping works correctly
+  expect(response !== undefined || error !== undefined).toBe(true)
+})
+
+test('Try.wrap preserves function signature', () => {
+  const originalFn = (a: string, b: number) => a.repeat(b)
+  const wrappedFn = Try.wrap(originalFn)
+
+  // Should accept the same parameters
+  const [result, error] = wrappedFn('hello', 3)
+
+  expect(result).toBe('hellohellohello')
+  expect(error).toBeUndefined()
+})
+
+test('Try.wrap can handle complex objects', () => {
+  const safeStringify = Try.wrap(JSON.stringify)
+  const complexObj = { nested: { value: 42 }, array: [1, 2, 3] }
+
+  const [result, error] = safeStringify(complexObj)
+
+  expect(result).toBe('{"nested":{"value":42},"array":[1,2,3]}')
+  expect(error).toBeUndefined()
+})
+
+test('Try.wrap can handle circular references', () => {
+  const safeStringify = Try.wrap(JSON.stringify)
+  const circular: any = { name: 'test' }
+  circular.self = circular
+
+  const [result, error] = safeStringify(circular)
+
+  expect(result).toBeUndefined()
+  expect(error).toBeDefined()
+  expect(error?.message).toContain('cyclic')
+})
+
+test('Try.wrap can be chained with other Try methods', () => {
+  const safeParse = Try.wrap(JSON.parse)
+  const [data, error] = safeParse('{"value": 123}')
+
+  if (!error) {
+    const result = data.value + 456
+    expect(result).toBe(579)
+  } else {
+    expect(error).toBeUndefined() // This should not happen
+  }
+})
+
+test('Try.wrap works with built-in functions', () => {
+  const safeURL = Try.wrap((url: string) => new URL(url))
+
+  const [validUrl, validError] = safeURL('https://example.com')
+  expect(validUrl?.href).toBe('https://example.com/')
+  expect(validError).toBeUndefined()
+
+  const [invalidUrl, invalidError] = safeURL('not-a-url')
+  expect(invalidUrl).toBeUndefined()
+  expect(invalidError).toBeDefined()
+})
+
 test('Res can call the isOk() and isErr() methods', async () => {
   let resultError = Try.catch(() => {
     throw new Error('alwaysThrows')

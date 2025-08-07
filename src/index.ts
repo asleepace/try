@@ -38,6 +38,15 @@ export type TryResultError = Res<never> & {
 export type TryResult<T> = TryResultOk<T> | TryResultError
 
 /**
+ * Wrapped try result functions.
+ */
+export type WrappedTryResultSync<Args, T> = (...args: Args[]) => TryResult<T>
+
+export type WrappedTryResultAsync<Args, T> = (
+  ...args: Args[]
+) => Promise<TryResult<T>>
+
+/**
  * ## Res
  *
  * This class extends the basic `OkTuple<T>` and `ErrorTuple` types with
@@ -241,6 +250,34 @@ export class Try {
     } catch (e) {
       return Res.err(e)
     }
+  }
+
+  /**
+   * Wraps the provided function with `Try.catch` so it can be called later.
+   * Returns a function with the same signature but wrapped with error handling.
+   *
+   * ```ts
+   * const safeParse = Try.wrap(JSON.parse)
+   * const [data, error] = safeParse('{"valid": "json"}')
+   *
+   * const safeFetch = Try.wrap(fetch)
+   * const [response, error] = await safeFetch('https://api.example.com')
+   * ```
+   */
+
+  static wrap<Args, T>(fn: (...args: Args[]) => T | Promise<T>) {
+    if (fn.constructor.name === 'AsyncFunction') {
+      const fnAsync = async (...args: Args[]) => {
+        return Try.catch(() => (fn as (...args: Args[]) => Promise<T>)(...args))
+      }
+      return fnAsync
+    }
+
+    const fnSync = (...args: Args[]): TryResult<T> => {
+      return Try.catch(() => (fn as (...args: Args[]) => T)(...args))
+    }
+
+    return fnSync
   }
 }
 
