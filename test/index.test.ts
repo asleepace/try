@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test'
-import { Res, Try, tryCatch, vet } from '../src/index'
+import { Res, Try, tryCatch, TryResult, vet } from '../src/index'
 
 test('Can call with sync function', () => {
   const result = Try.catch(function fn1() {
@@ -44,24 +44,27 @@ test('Can call with function that can return a sync value or promise', async () 
   expect(result)
 })
 
-// === constructors ===
-
-test('Can call constructors with arguments', () => {
-  const result = Try.catch(URL, 'http://asleepace.com/')
-  console.log('[test] result:', result)
-
-  expect(result.value?.href).toBeString()
-  expect(result.value?.hostname).toBe('asleepace.com')
-})
-
-test('Can handle constructors exceptions', () => {
-  const result = Try.catch(URL, 'http:\\as lee###pace.com\\')
+test('Can call with function that never returns', async () => {
+  function fn1() {
+    throw new Error('never')
+  }
+  const result = Try.catch(fn1)
   expect(result.isErr()).toBe(true)
-  expect(result.error).toBeDefined()
-  console.log(result)
+  expect(result.error?.message).toBe('never')
 })
 
-test('Can call with both sync and async functions', async () => {
+test('Can call with overloaded function and arguments', async () => {
+  const safeParse = (json: string) => Try.catch(JSON.parse, json)
+  const maybePromise = safeParse('{"data":123}')
+  if (maybePromise instanceof Promise) {
+    throw new Error('Should not be promise in this test.')
+  }
+  const result = maybePromise.as<{ data: number }>()
+  expect(result.isOk()).toBe(true)
+  expect(result.value?.data).toBe(123)
+})
+
+test('Can call with different types of sync and async functions', async () => {
   // Test #1 - Sync normal
   function fn1() {
     return 123
@@ -109,37 +112,41 @@ test('Can call with both sync and async functions', async () => {
   expect(fn7(() => 123).value).toBeNumber()
 })
 
-// Can use the (vet) shorthand utility
-test('Can use vet shorthand utility', () => {
-  const [url] = vet(() => new URL('https://asleepace.com'))
-  expect(url?.href).toBe('https://asleepace.com/')
+// =============================================================
+//                    --- Constructor Cases ---
+// =============================================================
 
-  const [, err] = vet(() => new URL('https://asleep ace.com'))
-  expect(err?.message).toBeDefined()
+test('Can call constructors with arguments', () => {
+  const result = Try.catch(URL, 'http://asleepace.com/')
+  expect(result.value?.href).toBeString()
+  expect(result.value?.hostname).toBe('asleepace.com')
 })
 
-// Can use the (vet) shorthand utility
-test('Can use vet shorthand utility with or chaining', () => {
-  const link = vet(() => new URL('asleepace.com'))
-    .or(() => new URL('https://aslee pace.com'))
-    .or(() => new URL('https://github.com'))
-    .unwrapOr(new URL('https://npm.com'))
-
-  expect(link.href).toBe('https://github.com/')
-  expect(link instanceof URL).toBe(true)
+test('Can call constructors and handle exceptions', () => {
+  const result = Try.catch(URL, 'http:\\as lee###pace.com\\')
+  expect(result.isErr()).toBe(true)
+  expect(result.error).toBeDefined()
 })
 
-test('Res can call the isOk() and isErr() methods', async () => {
-  let resultError = Try.catch(() => {
-    throw new Error('alwaysThrows')
-  })
-  expect(resultError.isOk()).toBe(false) // should also be type never
-  expect(resultError.isErr()).toBe(true)
-
-  let resultValue = Try.catch(() => 123)
-  expect(resultValue.isOk()).toBe(true)
-  expect(resultValue.isErr()).toBe(false)
+test('Can call constructors of custom classes', () => {
+  class Car {
+    constructor(public color: string) {}
+  }
+  const result = Try.catch(Car, 'blue')
+  expect(result.isOk()).toBe(true)
+  expect(result.value?.color).toBe('blue')
 })
+
+test('Can call constructors which are normal functions', () => {
+  const result = Try.catch(Error, 'test')
+  expect(result.isOk()).toBe(true)
+  expect(result.value).toBeInstanceOf(Error)
+  expect(result.value?.message).toBe('test')
+})
+
+// =============================================================
+//                 --- Try.catch Test Cases ---
+// =============================================================
 
 // Can extract values from synchronous functions
 test('Try.catch can catch synchronous values', () => {
@@ -226,120 +233,6 @@ test('Try.catch can catch promise resolutions (async)', async () => {
   })
   expect(value).toBe(789)
   expect(error).toBeUndefined()
-})
-
-// Result class tests
-
-test('Result.ok method is true when value is present', () => {
-  const result = Try.catch(() => ({
-    data: 'hello',
-  }))
-  expect(result.ok).toBe(true)
-  expect(result[0]).toBeDefined()
-  expect(result[1]).toBeUndefined()
-  expect(result.value).toBeDefined()
-  expect(result.error).toBeUndefined()
-  if (result.ok) {
-    expect(result.value.data).toEqual('hello')
-  }
-})
-
-test('Result.ok method is true when value is present (async)', async () => {
-  const result = await Try.catch(async () => ({
-    data: 'hello',
-  }))
-  expect(result.ok).toBe(true)
-  expect(result[0]).toBeDefined()
-  expect(result[1]).toBeUndefined()
-  expect(result.value).toBeDefined()
-  expect(result.error).toBeUndefined()
-  if (result.ok) {
-    expect(result.value.data).toEqual('hello')
-  }
-})
-
-test('Result.ok method is false when error is present', () => {
-  const result = Try.catch(() => {
-    throw new Error('failed')
-  })
-  expect(result.ok).toBe(false)
-  expect(result[0]).toBeUndefined()
-  expect(result[1]).toBeDefined()
-  expect(result.value).toBeUndefined()
-  expect(result.error).toBeDefined()
-  if (!result.ok) {
-    expect(result.error.message).toBe('failed')
-  }
-})
-
-test('Result.ok method is false when error is present (async)', async () => {
-  const result = await Try.catch(async () => {
-    throw new Error('failed')
-  })
-  expect(result.ok).toBe(false)
-  expect(result[0]).toBeUndefined()
-  expect(result[1]).toBeDefined()
-  expect(result.value).toBeUndefined()
-  expect(result.error).toBeDefined()
-  if (!result.ok) {
-    expect(result.error.message).toBe('failed')
-  }
-})
-
-test('Result.unwrap returns value or throws', () => {
-  const result1 = Try.catch(() => {
-    return new Date()
-  })
-  expect(result1.unwrap()).toBeDate()
-  const result2 = Try.catch(() => {
-    throw new Error('unwrap')
-  })
-  expect(result2.unwrap).toThrowError()
-})
-
-test('Result.unwrapOr returns value or fallback', () => {
-  const result1 = Try.catch(() => {
-    return 123
-  })
-  expect(result1.unwrapOr('fallback1')).toBe(123)
-  const result2 = Try.catch(() => {
-    throw new Error('unwrap')
-  })
-  expect(result2.unwrapOr('fallback2')).toBe('fallback2')
-})
-
-test('Edge case where result is error', () => {
-  const result = Try.catch(() => new Error('errorAsValue'))
-  expect(result.ok).toBeTrue()
-  expect(result.value?.message).toBe('errorAsValue')
-  expect(result[0]?.message).toBe('errorAsValue')
-  expect(result.unwrapOr(new Error('other'))?.message).toBe('errorAsValue')
-})
-
-test('Edge case where function never returns', () => {
-  const result = Try.catch(() => {})
-  expect(result.ok).toBeTrue()
-  expect(result.value).toBeUndefined()
-})
-
-test('Edge case where async function returns promise', async () => {
-  const result = await Try.catch(async () => {
-    return new Promise<number>((resolve) => {
-      resolve(123)
-    })
-  })
-  expect(result.ok).toBeTrue()
-  expect(result.value).toBe(123)
-})
-
-test('Edge where we encounters an unexpected error', async () => {
-  const result = await Try.catch(async () => {
-    const data = { value: null }
-    return (data as any).value.callInvalidFunction(123)
-  })
-  expect(result.ok).toBeFalse()
-  expect(result.value).toBeUndefined()
-  expect(result.error).toBeDefined()
 })
 
 // Test handling of non-Error objects thrown
@@ -438,7 +331,7 @@ test('Try.catch with delayed rejections', async () => {
 })
 
 // Test with recursive Try.catch
-test('Recursive Try.catch usage', () => {
+test('Try.catch with recursive usage', () => {
   const outer = Try.catch(() => {
     const inner = Try.catch(() => {
       throw new Error('inner error')
@@ -468,7 +361,7 @@ test('Try.catch with different Error types', () => {
 })
 
 // Test chaining with .unwrap()
-test('Chaining with unwrap', () => {
+test('Try.catch chaining with unwrap', () => {
   const result = Try.catch(() => 5).unwrap() + 10
 
   expect(result).toBe(15)
@@ -483,7 +376,7 @@ test('Chaining with unwrap', () => {
 })
 
 // Test conversion from Try result to Promise
-test('Convert Try result to Promise', async () => {
+test('Try.catch coerce result to Promise', async () => {
   const successResult = Try.catch(() => 'value')
   const successPromise = Promise.resolve(
     successResult.ok ? successResult.value : Promise.reject(successResult.error)
@@ -533,7 +426,7 @@ test('Try.catch with errors in Promise handlers', async () => {
 })
 
 // Test with custom error handling logic
-test('Custom error handling with Try', async () => {
+test('Try.catch with custom error handler', async () => {
   async function customHandler<T>(fn: () => T): Promise<T | string> {
     const result = Try.catch(fn)
 
@@ -557,12 +450,36 @@ test('Custom error handling with Try', async () => {
   expect(failure).toBe('Custom handler caught: oops')
 })
 
-test('Can call instanceof on Res class', () => {
+// =============================================================
+//                    --- VET Test Cases ---
+// =============================================================
+
+test('Can use vet shorthand utility', () => {
+  const [url] = vet(() => new URL('https://asleepace.com'))
+  expect(url?.href).toBe('https://asleepace.com/')
+  const [, err] = vet(() => new URL('https://asleep ace.com'))
+  expect(err?.message).toBeDefined()
+})
+
+test('Can use vet shorthand utility with or chaining', () => {
+  const link = vet(() => new URL('asleepace.com'))
+    .or(() => new URL('https://aslee pace.com'))
+    .or(() => new URL('https://github.com'))
+    .unwrapOr(new URL('https://npm.com'))
+  expect(link.href).toBe('https://github.com/')
+  expect(link instanceof URL).toBe(true)
+})
+
+// =============================================================
+//                    --- Res Test Cases ---
+// =============================================================
+
+test('Res can be called with instanceof', () => {
   const result = Try.catch(() => 123)
   expect(result instanceof Res).toBe(true)
 })
 
-test('Can call toString on Res class', () => {
+test('Res can be called with toString()', () => {
   const result1 = Try.catch(() => 123)
   expect(result1.toString()).toBe('Result.Ok(123)')
   const result2 = Try.catch(() => {
@@ -571,7 +488,7 @@ test('Can call toString on Res class', () => {
   expect(result2.toString()).toBe('Result.Error(456)')
 })
 
-test('Can create result tuple with Res.ok', () => {
+test('Res can be instantied with Res.ok<T>', () => {
   const result = Res.ok(true)
   expect(result.ok).toBe(true)
   expect(result.isOk()).toBe(true)
@@ -585,15 +502,154 @@ test('Can create result tuple with Res.ok', () => {
   expect(edgeCase1.unwrap()).toBeUndefined()
 })
 
-// ==================================================
-// tryCatch(fn, ...args)
-// ==================================================
+test('Res can call .isOk() and .isErr() methods', async () => {
+  let resultError = Try.catch(() => {
+    throw new Error('alwaysThrows')
+  })
+  expect(resultError.isOk()).toBe(false) // should also be type never
+  expect(resultError.isErr()).toBe(true)
 
-test('Can call tryCatch with sync function and args', () => {
+  let resultValue = Try.catch(() => 123)
+  expect(resultValue.isOk()).toBe(true)
+  expect(resultValue.isErr()).toBe(false)
+})
+
+test('Res can call methods to extract values', () => {
+  const result = Try.catch(() => ({
+    data: 'hello',
+  }))
+  expect(result.ok).toBe(true)
+  expect(result[0]).toBeDefined()
+  expect(result[1]).toBeUndefined()
+  expect(result.value).toBeDefined()
+  expect(result.error).toBeUndefined()
+  if (result.ok) {
+    expect(result.value.data).toEqual('hello')
+  }
+})
+
+test('Res can handle succes values', async () => {
+  const result = await Try.catch(async () => ({
+    data: 'hello',
+  }))
+  expect(result.ok).toBe(true)
+  expect(result[0]).toBeDefined()
+  expect(result[1]).toBeUndefined()
+  expect(result.value).toBeDefined()
+  expect(result.error).toBeUndefined()
+  if (result.ok) {
+    expect(result.value.data).toEqual('hello')
+  }
+})
+
+test('Res can handle error values', () => {
+  const result = Try.catch(() => {
+    throw new Error('failed')
+  })
+  expect(result.ok).toBe(false)
+  expect(result[0]).toBeUndefined()
+  expect(result[1]).toBeDefined()
+  expect(result.value).toBeUndefined()
+  expect(result.error).toBeDefined()
+  if (!result.ok) {
+    expect(result.error.message).toBe('failed')
+  }
+})
+
+test('Res can handle error values (async)', async () => {
+  const result = await Try.catch(async () => {
+    throw new Error('failed')
+  })
+  expect(result.ok).toBe(false)
+  expect(result[0]).toBeUndefined()
+  expect(result[1]).toBeDefined()
+  expect(result.value).toBeUndefined()
+  expect(result.error).toBeDefined()
+  if (!result.ok) {
+    expect(result.error.message).toBe('failed')
+  }
+})
+
+test('Res can call .unwrap() to narrow type or throw', () => {
+  const result1 = Try.catch(() => new Date())
+  expect(result1.unwrap()).toBeDate()
+  const result2 = Try.catch(() => {
+    throw new Error('unwrap')
+  })
+  expect(result2.unwrap).toThrowError()
+})
+
+test('Res can call .unwrapOr(fallack) to unwrap a value or fallback', () => {
+  const result1 = Try.catch(() => {
+    return 123
+  })
+  expect(result1.unwrapOr('fallback1')).toBe(123)
+  const result2 = Try.catch(() => {
+    throw new Error('unwrap')
+  })
+  expect(result2.unwrapOr('fallback2')).toBe('fallback2')
+})
+
+// =============================================================
+//                    --- tryCatch Cases ---
+// =============================================================
+
+test('tryCatch can be used like Try.catch', async () => {
+  const result1 = tryCatch(() => 123)
+  const result2 = await tryCatch(() => Promise.resolve(456))
+  const result3 = await tryCatch(async () => 'test')
+  const result4 = tryCatch(() => {
+    throw new Error('fail')
+  })
+  expect(result1.value).toBe(123)
+  expect(result2.value).toBe(456)
+  expect(result3.value).toBe('test')
+  expect(result4.error?.message).toBe('fail')
+})
+
+test('tryCatch can be called with sync function and args', () => {
   const result = tryCatch(JSON.stringify, { name: 'Colin' })
   expect(result).toBeInstanceOf(Res)
   expect(result.value).toBeDefined()
   if (result.ok) {
     expect(JSON.parse(result.value).name).toBe('Colin')
   }
+})
+
+// =============================================================
+//                    --- Edge Cases ---
+// =============================================================
+
+test('Edge case where result is error', () => {
+  const result = Try.catch(() => new Error('errorAsValue'))
+  expect(result.ok).toBeTrue()
+  expect(result.value?.message).toBe('errorAsValue')
+  expect(result[0]?.message).toBe('errorAsValue')
+  expect(result.unwrapOr(new Error('other'))?.message).toBe('errorAsValue')
+})
+
+test('Edge case where function never returns', () => {
+  const result = Try.catch(() => {})
+  expect(result.ok).toBeTrue()
+  expect(result.value).toBeUndefined()
+})
+
+test('Edge case where async function returns promise', async () => {
+  const result = await Try.catch(async () => {
+    return new Promise<number>((resolve) => {
+      resolve(123)
+    })
+  })
+  expect(result.ok).toBeTrue()
+  expect(result.value).toBe(123)
+})
+
+test('Edge where we encounters an unexpected error', async () => {
+  const result = await Try.catch(async () => {
+    const data = { value: null }
+    return (data as any).value.callInvalidFunction(123)
+  })
+  expect(result.ok).toBeFalse()
+  expect(result.value).toBeUndefined()
+  expect(result.error).toBeDefined()
 })

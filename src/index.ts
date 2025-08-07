@@ -37,28 +37,48 @@ export type TryResultError = Res<never> & {
  */
 export type TryResult<T> = TryResultOk<T> | TryResultError
 
+/**
+ * Generic constructor type.
+ */
 type Ctor<T, Args extends any[]> = new (...args: Args) => T
 
+/**
+ * Special symbol to mark an item as a constructor.
+ */
+export const isConstructorSymbol = Symbol('isConstructor')
+export const isNotConstructorSymbol = Symbol('isNotConstructor')
+
+const validConstructorNames = new Set(['Error', 'URL', 'Array'])
+
+const instanceRef: { value: any } = {
+  value: undefined,
+}
+
+/**
+ * Check if the provided function is a constructor.
+ * @note this has some edge cases.
+ */
 function isConstructor<T, Args extends any[]>(
   fn: ((...args: Args) => T) | Ctor<T, Args>,
   ...args: Args
 ): fn is Ctor<T, Args> {
-  if (typeof fn !== 'function') return false
+  try {
+    if (typeof fn !== 'function') return false
+    if (!fn?.prototype?.constructor) return false
+    if (validConstructorNames.has(fn.prototype.constructor.name)) return true
+    console.log('>>> [ctor] proto:', fn.prototype)
+    console.log('>>> [ctor] name:', fn.prototype.constructor.name)
 
-  // Quick checks first
-  if (!fn.prototype) return false
-  if (fn.prototype.constructor !== fn) return false
-
-  // Check function name (constructors typically start with uppercase)
-  if (!fn.name || !/^[A-Z]/.test(fn.name)) return false
-
-  // Check if it's a native constructor or class
-  const fnString = fn.toString()
-  if (fnString.includes('[native code]')) return true
-  if (/^class\s/.test(fnString)) return true
-  if (/^function\s[A-Z]/.test(fnString)) return true
-
-  return false
+    const impl = fn.toString()
+    if (impl.includes('=>')) return false // Arrow function
+    if (/^async\s/.test(impl)) return false // Async function
+    if (/^function\s*\*/.test(impl)) return false // Generator
+    if (impl.includes('[native code]')) return true
+    if (/^class\s/.test(impl)) return true
+    return false
+  } catch (e) {
+    return false
+  }
 }
 
 /**
@@ -79,9 +99,13 @@ export class Res<T> extends Array {
   /**
    * Helper methods for instantiating via a tuple.
    */
+  static from<G>(tuple: Res<any>): TryResult<G>
   static from<G>(tuple: ErrorTuple): TryResultError
   static from<G>(tuple: OkTuple<G>): TryResultOk<G>
-  static from<G>(tuple: OkTuple<G> | ErrorTuple): TryResult<G> {
+  static from<G>(tuple: OkTuple<G> | ErrorTuple | Res<any>): TryResult<G> {
+    if (tuple instanceof Res) {
+      return new Res([tuple.value, tuple.error]) as TryResult<G>
+    }
     return new Res(tuple) as TryResult<G>
   }
 
@@ -179,6 +203,14 @@ export class Res<T> extends Array {
   public or = Try.catch
 
   /**
+   * Type cast the result value <T> to a different type.
+
+   */
+  public as<G>() {
+    return Res.from<G>(this)
+  }
+
+  /**
    * Converts this to a human readable string.
    */
   public toString(): string {
@@ -263,6 +295,7 @@ export class Try {
   ): any {
     try {
       if (isConstructor(fn, ...args)) {
+        console.log('>>> [ctor] is constructor...')
         return Res.ok(new fn(...args))
       }
       const output = fn(...args)
@@ -298,11 +331,14 @@ export const vet = Try.catch
  * A simple utility for try / catch which results a value-error tuple with
  * the result of the function call.
  *
+ * ```ts
+ * const [url, error] = tryCatch(URL, 'https://asleepace.com')
+ *
+ * if (!url) return error.message
+ *
+ * const [json] = tryCatch(() => fetch(url).then(res => res.json()))
+ * ```
+ *
  * @see {@link Try.catch} for full documentation and examples
  */
-export function tryCatch<T, Args extends any[] = []>(
-  fn: (...args: Args) => T,
-  ...args: Args
-) {
-  return Try.catch(() => fn(...args))
-}
+export const tryCatch = Try.catch

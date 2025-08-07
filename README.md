@@ -6,21 +6,14 @@ Type-safe error handling primitives for modern JavaScript & TypeScript projects.
 
 ## Installation
 
-Using npm:
-
 ```bash
+# install via npm
 npm install @asleepace/try
-```
 
-Using Yarn:
-
-```bash
+# install via yarn
 yarn add @asleepace/try
-```
 
-Using Bun:
-
-```bash
+# install via bun
 bun add @asleepace/try
 ```
 
@@ -102,10 +95,11 @@ const user = result.unwrapOr(cachedUser) // User
 ## API
 
 ```ts
-Try.catch<T>(fn: () => Promise<T>): Promise<[T, undefined] | [undefined, Error]>
+Try.catch<T, Args extends any[]>(fn: (...args: Args) => T): [T, undefined] | [undefined, Error]
+Try.catch<T, Args extends any[]>(fn: (...args: Args) => Promise<T>): Promise<[T, undefined] | [undefined, Error]>
 ```
 
-Executes a function and returns a tuple containing either:
+Executes a function and returns a result tuple or result tuple promise containing:
 
 - `[value, undefined]` if the function executes successfully
 - `[undefined, error]` if the function throws an error
@@ -309,6 +303,14 @@ The returned result object includes several convenience properties and methods:
 - This allows for easier type checking and integration with existing code patterns.
 
 # Changelog
+
+## 0.3.0
+
+- add support for calling functions with arguments
+- add support for instantiating constructors with arguments
+- add support for overloaded sync & async functions
+- add method `.as<T>()` for type casting result tuples
+- add more test cases
 
 ## 0.2.1
 
