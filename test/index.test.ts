@@ -1,5 +1,95 @@
 import { test, expect } from 'bun:test'
-import { Res, Try, vet } from '../src/index'
+import { Res, Try, tryCatch, vet } from '../src/index'
+
+test('Can call with sync function', () => {
+  const result = Try.catch(function fn1() {
+    return 123
+  })
+  expect(result).toBeInstanceOf(Res)
+  expect(result.value).toBeNumber()
+})
+
+test('Can call with async function', async () => {
+  const promise = Try.catch(async function fn1() {
+    return 123
+  })
+  expect(promise).toBeInstanceOf(Promise)
+  const result = await promise
+  expect(result.value).toBeNumber()
+})
+
+test('Can call with sync function which returns a resolved promise', async () => {
+  const promise = Try.catch(function fn1() {
+    return Promise.resolve('item')
+  })
+  expect(promise).toBeInstanceOf(Promise)
+  const result = await promise
+  expect(result.value).toBeString()
+})
+
+test('Can call with sync function which returns a promise which resolves', async () => {
+  const promise = Try.catch(function fn1() {
+    return new Promise<boolean>((resolve) => resolve(true))
+  })
+  expect(promise).toBeInstanceOf(Promise)
+  const result = await promise
+  expect(result.value).toBeBoolean()
+})
+
+test('Can call with function that can return a sync value or promise', async () => {
+  function fn1(): boolean | Promise<boolean> {
+    return Math.random() < 0.5 ? false : Promise.resolve(true)
+  }
+  const result = Try.catch(fn1)
+  expect(result)
+})
+
+test('Can call with both sync and async functions', async () => {
+  // Test #1 - Sync normal
+  function fn1() {
+    return 123
+  }
+  async function fn2() {
+    return 123
+  }
+  function fn3() {
+    return Promise.resolve('hello')
+  }
+  function fn4() {
+    return new Promise<boolean>((resolve) => resolve(true))
+  }
+  function fn5(): boolean | Promise<boolean> {
+    return Math.random() < 0.5 ? false : fn4()
+  }
+  function fn6() {
+    throw new Error('never')
+  }
+  // handle generics
+  function fn7<T>(example: () => T) {
+    return Try.catch(example)
+  }
+
+  const result1 = Try.catch(fn1)
+  const result2 = await Try.catch(fn2)
+  const result3 = await Try.catch(fn3)
+  const result4 = await Try.catch(fn4)
+  const result5_1 = await Try.catch(fn5)
+  const result5_2 = Try.catch(fn5)
+  const result6 = Try.catch(fn6)
+
+  expect(result1.value).toBeNumber()
+  expect(result2.value).toBeNumber()
+  expect(result3.value).toBeString()
+  expect(result4.value).toBeBoolean()
+  expect(result6.value).toBeUndefined()
+  // edge case where output can be sync or async
+  if (result5_2 instanceof Promise) {
+    expect((await result5_2).value).toBe(true)
+  } else {
+    expect(result5_2.value).toBe(false)
+  }
+  expect(fn7(() => 123).value).toBeNumber()
+})
 
 // Can use the (vet) shorthand utility
 test('Can use vet shorthand utility', () => {
@@ -103,12 +193,12 @@ test('Try.catch can catch asynchronous errors', async () => {
 
 // Can handle promise rejections
 test('Try.catch can catch promise rejections (async)', async () => {
-  const [value, error] = await Try.catch(async () => {
+  const result = await Try.catch(async () => {
     return Promise.reject('error')
   })
-  expect(value).toBeUndefined()
-  expect(error).toBeDefined()
-  expect(error?.message).toBe('error')
+  expect(result.value).toBeUndefined()
+  expect(result.error).toBeDefined()
+  expect(result.error?.message).toBe('error')
 })
 
 // Can handle promise resolutions
@@ -425,19 +515,25 @@ test('Try.catch with errors in Promise handlers', async () => {
 })
 
 // Test with custom error handling logic
-test('Custom error handling with Try', () => {
-  function customHandler<T>(fn: () => T): T | string {
+test('Custom error handling with Try', async () => {
+  async function customHandler<T>(fn: () => T): Promise<T | string> {
     const result = Try.catch(fn)
-    if (!result.ok) {
+
+    if (result instanceof Promise) {
+      const [value, error] = await result
+      return value as T
+    }
+
+    if (!result.isOk()) {
       return `Custom handler caught: ${result.error?.message}`
     }
     return result.value
   }
 
-  const success = customHandler(() => 'success')
+  const success = await customHandler(() => 'success')
   expect(success).toBe('success')
 
-  const failure = customHandler(() => {
+  const failure = await customHandler(() => {
     throw new Error('oops')
   })
   expect(failure).toBe('Custom handler caught: oops')
@@ -469,4 +565,17 @@ test('Can create result tuple with Res.ok', () => {
   expect(edgeCase1.isOk()).toBe(true)
   expect(edgeCase1.isErr()).toBe(false)
   expect(edgeCase1.unwrap()).toBeUndefined()
+})
+
+// ==================================================
+// tryCatch(fn, ...args)
+// ==================================================
+
+test('Can call tryCatch with sync function and args', () => {
+  const result = tryCatch(JSON.stringify, { name: 'Colin' })
+  expect(result).toBeInstanceOf(Res)
+  expect(result.value).toBeDefined()
+  if (result.ok) {
+    expect(JSON.parse(result.value).name).toBe('Colin')
+  }
 })

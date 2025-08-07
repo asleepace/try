@@ -37,6 +37,14 @@ export type TryResultError = Res<never> & {
  */
 export type TryResult<T> = TryResultOk<T> | TryResultError
 
+export type TryInfer<T> = T extends Promise<infer U>
+  ? Promise<TryResult<U>>
+  : T extends never
+  ? TryResultError
+  : T extends infer U | Promise<infer V>
+  ? Promise<TryResult<U | V>>
+  : TryResult<T>
+
 /**
  * ## Res
  *
@@ -67,6 +75,15 @@ export class Res<T> extends Array {
 
   static err<G>(exception: unknown): TryResultError {
     return Res.from([undefined, Res.toError(exception)])
+  }
+
+  static async promise<G>(promise: Promise<G>) {
+    try {
+      const result = await promise
+      return Res.ok(result)
+    } catch (e) {
+      return Res.err(e)
+    }
   }
 
   declare 0: T | undefined
@@ -217,23 +234,31 @@ export class Try {
    *  return jsonData
    * ```
    */
-  static catch<T>(fn: () => never): TryResultError
-  static catch<T>(fn: () => Promise<T>): Promise<TryResult<T>>
-  static catch<T>(fn: () => T): TryResult<T>
-  static catch<T>(
-    fn: () => T | Promise<T>
-  ): TryResult<T> | Promise<TryResult<T>> {
+  static catch<T, Args extends any[]>(
+    fn: (...args: Args) => never,
+    ...args: Args
+  ): TryResultError
+  static catch<T, Args extends any[]>(
+    fn: (...args: Args) => Promise<T>,
+    ...args: Args
+  ): Promise<TryResult<T>>
+  static catch<T, Args extends any[]>(
+    fn: (...args: Args) => T,
+    ...args: Args
+  ): T extends Promise<infer U> ? Promise<TryResult<U>> : TryResult<T>
+  static catch<T, Args extends any[]>(
+    fn: (...args: Args) => T,
+    ...args: Args
+  ): any {
     try {
-      const output = fn()
+      const output = fn(...args)
       if (output instanceof Promise) {
-        return output
-          .then((value) => Res.ok(value))
-          .catch((error) => Res.err(error))
+        return Res.promise(output) as any
       } else {
-        return Res.ok(output)
+        return Res.ok(output) as any
       }
     } catch (e) {
-      return Res.err(e)
+      return Res.err(e) as any
     }
   }
 }
@@ -252,3 +277,18 @@ export class Try {
  * ```
  */
 export const vet = Try.catch
+
+/**
+ * # tryCatch(fn, ...args)
+ *
+ * A simple utility for try / catch which results a value-error tuple with
+ * the result of the function call.
+ *
+ * @see {@link Try.catch} for full documentation and examples
+ */
+export function tryCatch<T, Args extends any[] = []>(
+  fn: (...args: Args) => T,
+  ...args: Args
+) {
+  return Try.catch(() => fn(...args))
+}
