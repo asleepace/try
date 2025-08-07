@@ -44,6 +44,23 @@ test('Can call with function that can return a sync value or promise', async () 
   expect(result)
 })
 
+// === constructors ===
+
+test('Can call constructors with arguments', () => {
+  const result = Try.catch(URL, 'http://asleepace.com/')
+  console.log('[test] result:', result)
+
+  expect(result.value?.href).toBeString()
+  expect(result.value?.hostname).toBe('asleepace.com')
+})
+
+test('Can handle constructors exceptions', () => {
+  const result = Try.catch(URL, 'http:\\as lee###pace.com\\')
+  expect(result.isErr()).toBe(true)
+  expect(result.error).toBeDefined()
+  console.log(result)
+})
+
 test('Can call with both sync and async functions', async () => {
   // Test #1 - Sync normal
   function fn1() {
@@ -81,6 +98,7 @@ test('Can call with both sync and async functions', async () => {
   expect(result2.value).toBeNumber()
   expect(result3.value).toBeString()
   expect(result4.value).toBeBoolean()
+  expect(result5_1.value).toBeBoolean()
   expect(result6.value).toBeUndefined()
   // edge case where output can be sync or async
   if (result5_2 instanceof Promise) {

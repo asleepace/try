@@ -37,13 +37,29 @@ export type TryResultError = Res<never> & {
  */
 export type TryResult<T> = TryResultOk<T> | TryResultError
 
-export type TryInfer<T> = T extends Promise<infer U>
-  ? Promise<TryResult<U>>
-  : T extends never
-  ? TryResultError
-  : T extends infer U | Promise<infer V>
-  ? Promise<TryResult<U | V>>
-  : TryResult<T>
+type Ctor<T, Args extends any[]> = new (...args: Args) => T
+
+function isConstructor<T, Args extends any[]>(
+  fn: ((...args: Args) => T) | Ctor<T, Args>,
+  ...args: Args
+): fn is Ctor<T, Args> {
+  if (typeof fn !== 'function') return false
+
+  // Quick checks first
+  if (!fn.prototype) return false
+  if (fn.prototype.constructor !== fn) return false
+
+  // Check function name (constructors typically start with uppercase)
+  if (!fn.name || !/^[A-Z]/.test(fn.name)) return false
+
+  // Check if it's a native constructor or class
+  const fnString = fn.toString()
+  if (fnString.includes('[native code]')) return true
+  if (/^class\s/.test(fnString)) return true
+  if (/^function\s[A-Z]/.test(fnString)) return true
+
+  return false
+}
 
 /**
  * ## Res
@@ -200,15 +216,6 @@ export class Res<T> extends Array {
  * console.warn(result.error.message) //  exceptions are converted to Errors
  * ```
  *
- * For a more shorthand version see the value-error-tuple (vet) utility,
- * which can be used like so:
- *
- * ```ts
- * import { vet } from '@asleepace/try'
- *
- * return vet(() => response.json()).unwrapOr(defaultValue)
- * ```
- *
  * For more information and detailed usage on the specification:
  *
  * @see https://github.com/asleepace/try
@@ -247,10 +254,17 @@ export class Try {
     ...args: Args
   ): T extends Promise<infer U> ? Promise<TryResult<U>> : TryResult<T>
   static catch<T, Args extends any[]>(
-    fn: (...args: Args) => T,
+    fn: new (...args: Args) => T,
+    ...args: Args
+  ): TryResult<T>
+  static catch<T, Args extends any[]>(
+    fn: ((...args: Args) => T) | (new (...args: Args) => T),
     ...args: Args
   ): any {
     try {
+      if (isConstructor(fn, ...args)) {
+        return Res.ok(new fn(...args))
+      }
       const output = fn(...args)
       if (output instanceof Promise) {
         return Res.promise(output) as any
